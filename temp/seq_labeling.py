@@ -101,15 +101,12 @@ def attention_RNN(encoder_outputs,
                         a = tf.nn.softmax(s)
                         attn_weights.append(a)
                         # Now calculate the attention-weighted vector d.
-                        d = tf.reduce_sum(
-                            tf.reshape(a, [-1, attn_length, 1, 1]) * hidden,
-                            [1, 2])
+                        d = tf.reduce_sum(tf.reshape(a, [-1, attn_length, 1, 1]) * hidden, [1, 2])
                         ds.append(tf.reshape(d, [-1, attn_size]))
                 return attn_weights, ds
 
             batch_attn_size = tf.stack([batch_size, attn_size])
-            attns = [tf.zeros(batch_attn_size, dtype=dtype)
-                     for _ in range(num_heads)]
+            attns = [tf.zeros(batch_attn_size, dtype=dtype) for _ in range(num_heads)]
             for a in attns:  # Ensure the second shape of attention vectors is set.
                 a.set_shape([None, attn_size])
 

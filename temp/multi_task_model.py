@@ -36,7 +36,6 @@ class MultiTaskModel(object):
     def __init__(self,
                  source_vocab_size,
                  tag_vocab_size,
-                 label_vocab_size,
                  buckets,
                  word_embedding_size,
                  size,
@@ -44,15 +43,11 @@ class MultiTaskModel(object):
                  max_gradient_norm,
                  batch_size,
                  dropout_keep_prob=1.0,
-                 use_lstm=False,
                  bidirectional_rnn=True,
-                 num_samples=1024,
                  use_attention=False,
-                 task=None,
                  forward_only=False):
         self.source_vocab_size = source_vocab_size
         self.tag_vocab_size = tag_vocab_size
-        self.label_vocab_size = label_vocab_size
         self.word_embedding_size = word_embedding_size
         self.cell_size = size
         self.num_layers = num_layers
@@ -101,22 +96,19 @@ class MultiTaskModel(object):
         base_rnn_output = self.generate_rnn_output()
         encoder_outputs, encoder_state, attention_states = base_rnn_output
 
-        if task['tagging'] == 1:
-            seq_labeling_outputs = seq_labeling.generate_sequence_output(
-                self.source_vocab_size,
-                encoder_outputs,
-                encoder_state,
-                self.tags,
-                self.sequence_length,
-                self.tag_vocab_size,
-                self.tag_weights,
-                buckets,
-                softmax_loss_function=softmax_loss_function,
-                use_attention=use_attention)
-            self.tagging_output, self.tagging_loss = seq_labeling_outputs
+        seq_labeling_outputs = seq_labeling.generate_sequence_output(self.source_vocab_size,
+                                                                     encoder_outputs,
+                                                                     encoder_state,
+                                                                     self.tags,
+                                                                     self.sequence_length,
+                                                                     self.tag_vocab_size,
+                                                                     self.tag_weights,
+                                                                     buckets,
+                                                                     softmax_loss_function=softmax_loss_function,
+                                                                     use_attention=use_attention)
+        self.tagging_output, self.tagging_loss = seq_labeling_outputs
 
-        if task['tagging'] == 1:
-            self.loss = self.tagging_loss
+        self.loss = self.tagging_loss
 
         # Gradients and SGD update operation for training the model.
         params = tf.trainable_variables()
@@ -144,12 +136,6 @@ class MultiTaskModel(object):
                                              self.word_embedding_size])
                 encoder_emb_inputs = list()
                 encoder_emb_inputs = [tf.nn.embedding_lookup(embedding, encoder_input) for encoder_input in self.encoder_inputs]
-
-                print("==============================================================")
-                print(encoder_emb_inputs)
-                print(self.source_vocab_size)
-                print(self.word_embedding_size)
-                print("==============================================================")
 
                 rnn_outputs = static_bidirectional_rnn(self.cell_fw,
                                                        self.cell_bw,

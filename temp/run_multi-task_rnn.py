@@ -32,7 +32,7 @@ tf.app.flags.DEFINE_float("max_gradient_norm", 5.0,
 tf.app.flags.DEFINE_integer("batch_size", 16,
                             "Batch size to use during training.")
 tf.app.flags.DEFINE_integer("size", 128, "Size of each model layer.")
-tf.app.flags.DEFINE_integer("word_embedding_size", 128, "word embedding size")
+tf.app.flags.DEFINE_integer("word_embedding_size", 300, "word embedding size")
 tf.app.flags.DEFINE_integer("num_layers", 1, "Number of layers in the model.")
 tf.app.flags.DEFINE_integer("in_vocab_size", 10000, "max vocab Size.")
 tf.app.flags.DEFINE_integer("out_vocab_size", 10000, "max tag vocab Size.")
@@ -121,8 +121,8 @@ def get_perf(filename):
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE)
 
-    stdout, _ = proc.communicate(bytes("".join(open(filename,"r").readlines()), encoding = "utf8"))
-    for line in str(stdout, encoding = "utf-8").split("\n"):
+    stdout, _ = proc.communicate(bytes("".join(open(filename, "r").readlines()), encoding="utf8"))
+    for line in str(stdout, encoding="utf-8").split("\n"):
         print(line)
         if 'accuracy' in line:
             out = line.split()
@@ -242,7 +242,6 @@ def train():
     date_set = data_utils.prepare_multi_task_data(
         FLAGS.data_dir, FLAGS.in_vocab_size, FLAGS.out_vocab_size)
 
-
     in_seq_train, out_seq_train, label_train = date_set[0]
     in_seq_dev, out_seq_dev, label_dev = date_set[1]
     in_seq_test, out_seq_test, label_test = date_set[2]
@@ -257,7 +256,7 @@ def train():
     current_taging_valid_out_file = result_dir + '/tagging.valid.hyp.txt'
     current_taging_test_out_file = result_dir + '/tagging.test.hyp.txt'
 
-    #每个单词对应一个数字，vocab是单词对应数字的dict，rev_vocab是所有单词的list
+    # 每个单词对应一个数字，vocab是单词对应数字的dict，rev_vocab是所有单词的list
     vocab, rev_vocab = data_utils.initialize_vocab(vocab_path)
     tag_vocab, rev_tag_vocab = data_utils.initialize_vocab(tag_vocab_path)
     label_vocab, rev_label_vocab = data_utils.initialize_vocab(label_vocab_path)
@@ -322,35 +321,16 @@ def train():
             # Get a batch and make a step.
             start_time = time.time()
             batch_data = model.get_batch(train_set, bucket_id)
-            encoder_inputs, tags, tag_weights, batch_sequence_length, labels = batch_data
-            print(encoder_inputs)
-            print(tags)
-            print(tag_weights)
-            print(batch_sequence_length)
-            print(labels)
-            if task['joint'] == 1:
-                pass
-            elif task['tagging'] == 1:
-                step_outputs = model.tagging_step(sess,
-                                                  encoder_inputs,
-                                                  tags,
-                                                  tag_weights,
-                                                  batch_sequence_length,
-                                                  bucket_id,
-                                                  False)
-                _, step_loss, tagging_logits = step_outputs
-                print("tagging")
-                print(step_loss)
-                print(tagging_logits)
-            elif task['intent'] == 1:
-                pass
+            # 获取输入数据，标注等
+            encoder_inputs, tags, tag_weights, batch_sequence_length, _ = batch_data
+
+            # loss损失函数值，
+            _, step_loss, tagging_logits = model.tagging_step(sess, encoder_inputs, tags, tag_weights
+                                              , batch_sequence_length, bucket_id, False)
 
             step_time += (time.time() - start_time) / FLAGS.steps_per_checkpoint
             loss += step_loss / FLAGS.steps_per_checkpoint
             current_step += 1
-
-            print("================================2===================================")
-            sys.exit()
 
             # Once in a while, we save checkpoint, print statistics, and run evals.
             if current_step % FLAGS.steps_per_checkpoint == 0:
@@ -359,8 +339,8 @@ def train():
                       % (model.global_step.eval(), step_time, perplexity))
                 sys.stdout.flush()
                 # Save checkpoint and zero timer and loss.
-                checkpoint_path = os.path.join(FLAGS.train_dir, "model.ckpt")
-                model.saver.save(sess, checkpoint_path, global_step=model.global_step)
+                # checkpoint_path = os.path.join(FLAGS.train_dir, "model.ckpt")
+                # model.saver.save(sess, checkpoint_path, global_step=model.global_step)
                 step_time, loss = 0.0, 0.0
 
                 def run_valid_test(data_set, mode):  # mode: Eval, Test
@@ -382,41 +362,19 @@ def train():
                             encoder_inputs, tags, tag_weights, sequence_length, labels = sample
                             tagging_logits = []
                             class_logits = []
-                            if task['joint'] == 1:
-                                step_outputs = model_test.joint_step(sess,
-                                                                     encoder_inputs,
-                                                                     tags,
-                                                                     tag_weights,
-                                                                     labels,
-                                                                     sequence_length,
-                                                                     bucket_id,
-                                                                     True)
-                                _, step_loss, tagging_logits, class_logits = step_outputs
-                            elif task['tagging'] == 1:
-                                step_outputs = model_test.tagging_step(sess,
-                                                                       encoder_inputs,
-                                                                       tags,
-                                                                       tag_weights,
-                                                                       sequence_length,
-                                                                       bucket_id,
-                                                                       True)
-                                _, step_loss, tagging_logits = step_outputs
-                            elif task['intent'] == 1:
-                                step_outputs = model_test.classification_step(sess,
-                                                                              encoder_inputs,
-                                                                              labels,
-                                                                              sequence_length,
-                                                                              bucket_id,
-                                                                              True)
-                                _, step_loss, class_logits = step_outputs
+
+                            step_outputs = model_test.tagging_step(sess,
+                                                                    encoder_inputs,
+                                                                    tags,
+                                                                    tag_weights,
+                                                                    sequence_length,
+                                                                    bucket_id,
+                                                                    True)
+                            _, step_loss, tagging_logits = step_outputs
+
                             eval_loss += step_loss / len(data_set[bucket_id])
                             hyp_label = None
-                            if task['intent'] == 1:
-                                ref_label_list.append(rev_label_vocab[labels[0][0]])
-                                hyp_label = np.argmax(class_logits[0], 0)
-                                hyp_label_list.append(rev_label_vocab[hyp_label])
-                                if labels[0] == hyp_label:
-                                    correct_count += 1
+
                             if task['tagging'] == 1:
                                 word_list.append([rev_vocab[x[0]] for x in \
                                                   encoder_inputs[:sequence_length[0]]])
@@ -427,10 +385,7 @@ def train():
                                      tagging_logits[:sequence_length[0]]])
 
                     accuracy = float(correct_count) * 100 / count
-                    if task['intent'] == 1:
-                        print("  %s accuracy: %.2f %d/%d" \
-                              % (mode, accuracy, correct_count, count))
-                        sys.stdout.flush()
+
                     if task['tagging'] == 1:
                         if mode == 'Eval':
                             taging_out_file = current_taging_valid_out_file

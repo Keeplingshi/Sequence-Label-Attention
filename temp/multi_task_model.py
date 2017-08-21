@@ -114,36 +114,15 @@ class MultiTaskModel(object):
                 softmax_loss_function=softmax_loss_function,
                 use_attention=use_attention)
             self.tagging_output, self.tagging_loss = seq_labeling_outputs
-        if task['intent'] == 1:
-            seq_intent_outputs = seq_classification.generate_single_output(
-                encoder_state,
-                attention_states,
-                self.sequence_length,
-                self.labels,
-                self.label_vocab_size,
-                buckets,
-                softmax_loss_function=softmax_loss_function,
-                use_attention=use_attention)
-            self.classification_output, self.classification_loss = seq_intent_outputs
 
         if task['tagging'] == 1:
             self.loss = self.tagging_loss
-        elif task['intent'] == 1:
-            self.loss = self.classification_loss
 
         # Gradients and SGD update operation for training the model.
         params = tf.trainable_variables()
         if not forward_only:
             opt = tf.train.AdamOptimizer()
-            if task['joint'] == 1:
-                # backpropagate the intent and tagging loss, one may further adjust
-                # the weights for the two costs.
-                gradients = tf.gradients([self.tagging_loss, self.classification_loss],
-                                         params)
-            elif task['tagging'] == 1:
-                gradients = tf.gradients(self.tagging_loss, params)
-            elif task['intent'] == 1:
-                gradients = tf.gradients(self.classification_loss, params)
+            gradients = tf.gradients(self.tagging_loss, params)
 
             clipped_gradients, norm = tf.clip_by_global_norm(gradients,
                                                              max_gradient_norm)
@@ -158,13 +137,20 @@ class MultiTaskModel(object):
         Generate RNN state outputs with word embeddings as inputs
         """
         with tf.variable_scope("generate_seq_output"):
+            # 双向rnn
             if self.bidirectional_rnn:
                 embedding = tf.get_variable("embedding",
                                             [self.source_vocab_size,
                                              self.word_embedding_size])
                 encoder_emb_inputs = list()
-                encoder_emb_inputs = [tf.nn.embedding_lookup(embedding, encoder_input) \
-                                      for encoder_input in self.encoder_inputs]
+                encoder_emb_inputs = [tf.nn.embedding_lookup(embedding, encoder_input) for encoder_input in self.encoder_inputs]
+
+                print("==============================================================")
+                print(encoder_emb_inputs)
+                print(self.source_vocab_size)
+                print(self.word_embedding_size)
+                print("==============================================================")
+
                 rnn_outputs = static_bidirectional_rnn(self.cell_fw,
                                                        self.cell_bw,
                                                        encoder_emb_inputs,
@@ -181,6 +167,7 @@ class MultiTaskModel(object):
                                              + self.cell_bw.output_size])
                               for e in encoder_outputs]
                 attention_states = tf.concat(top_states, 1)
+            # 单向rnn
             else:
                 embedding = tf.get_variable("embedding",
                                             [self.source_vocab_size,
@@ -202,69 +189,6 @@ class MultiTaskModel(object):
                 attention_states = tf.concat(top_states, 1)
             return encoder_outputs, encoder_state, attention_states
 
-    def joint_step(self, session, encoder_inputs, tags, tag_weights,
-                   labels, batch_sequence_length,
-                   bucket_id, forward_only):
-        """Run a step of the joint model feeding the given inputs.
-
-        Args:
-          session: tensorflow session to use.
-          encoder_inputs: list of numpy int vectors to feed as encoder inputs.
-          tags: list of numpy int vectors to feed as decoder inputs.
-          tag_weights: list of numpy float vectors to feed as tag weights.
-          labels: list of numpy int vectors to feed as sequence class labels.
-          bucket_id: which bucket of the model to use.
-          batch_sequence_length: batch_sequence_length
-          bucket_id: which bucket of the model to use.
-          forward_only: whether to do the backward step or only forward.
-
-        Returns:
-          A triple consisting of gradient norm (or None if we did not do backward),
-          average perplexity, output tags, and output class label.
-
-        Raises:
-          ValueError: if length of encoder_inputs, decoder_inputs, or
-            target_weights disagrees with bucket size for the specified bucket_id.
-        """
-        # Check if the sizes match.
-        encoder_size, tag_size = self.buckets[bucket_id]
-        if len(encoder_inputs) != encoder_size:
-            raise ValueError("Encoder length must be equal to the one in bucket,"
-                             " %d != %d." % (len(encoder_inputs), encoder_size))
-        if len(tags) != tag_size:
-            raise ValueError("Decoder length must be equal to the one in bucket,"
-                             " %d != %d." % (len(tags), tag_size))
-        if len(labels) != 1:
-            raise ValueError("Decoder length must be equal to the one in bucket,"
-                             " %d != %d." % (len(labels), 1))
-
-        input_feed = {}
-        input_feed[self.sequence_length.name] = batch_sequence_length
-        for l in range(encoder_size):
-            input_feed[self.encoder_inputs[l].name] = encoder_inputs[l]
-            input_feed[self.tags[l].name] = tags[l]
-            input_feed[self.tag_weights[l].name] = tag_weights[l]
-        input_feed[self.labels[0].name] = labels[0]
-
-        # Output feed: depends on whether we do a backward step or not.
-        if not forward_only:
-            output_feed = [self.update,  # Update Op that does SGD.
-                           self.gradient_norm,  # Gradient norm.
-                           self.loss]  # Loss for this batch.
-            for i in range(tag_size):
-                output_feed.append(self.tagging_output[i])
-            output_feed.append(self.classification_output[0])
-        else:
-            output_feed = [self.loss]
-            for i in range(tag_size):
-                output_feed.append(self.tagging_output[i])
-            output_feed.append(self.classification_output[0])
-
-        outputs = session.run(output_feed, input_feed)
-        if not forward_only:
-            return outputs[1], outputs[2], outputs[3:3 + tag_size], outputs[-1]
-        else:
-            return None, outputs[0], outputs[1:1 + tag_size], outputs[-1]
 
     def tagging_step(self, session, encoder_inputs, tags, tag_weights,
                      batch_sequence_length, bucket_id, forward_only):
@@ -322,54 +246,6 @@ class MultiTaskModel(object):
         else:
             return None, outputs[0], outputs[1:1 + tag_size]
 
-    def classification_step(self, session, encoder_inputs, labels,
-                            batch_sequence_length, bucket_id, forward_only):
-        """Run a step of the intent classification model feeding the given inputs.
-
-        Args:
-          session: tensorflow session to use.
-          encoder_inputs: list of numpy int vectors to feed as encoder inputs.
-          labels: list of numpy int vectors to feed as sequence class labels.
-          batch_sequence_length: batch_sequence_length
-          bucket_id: which bucket of the model to use.
-          forward_only: whether to do the backward step or only forward.
-
-        Returns:
-          A triple consisting of gradient norm (or None if we did not do backward),
-          average perplexity, and the output class label.
-
-        Raises:
-          ValueError: if length of encoder_inputs, decoder_inputs, or
-            target_weights disagrees with bucket size for the specified bucket_id.
-        """
-        # Check if the sizes match.
-        encoder_size, target_size = self.buckets[bucket_id]
-        if len(encoder_inputs) != encoder_size:
-            raise ValueError("Encoder length must be equal to the one in bucket,"
-                             " %d != %d." % (len(encoder_inputs), encoder_size))
-
-        # Input feed: encoder inputs, decoder inputs, target_weights, as provided.
-        input_feed = {}
-        input_feed[self.sequence_length.name] = batch_sequence_length
-        for l in range(encoder_size):
-            input_feed[self.encoder_inputs[l].name] = encoder_inputs[l]
-        input_feed[self.labels[0].name] = labels[0]
-
-        # Output feed: depends on whether we do a backward step or not.
-        if not forward_only:
-            output_feed = [self.update,  # Update Op that does SGD.
-                           self.gradient_norm,  # Gradient norm.
-                           self.loss,  # Loss for this batch.
-                           self.classification_output[0]]
-        else:
-            output_feed = [self.loss,
-                           self.classification_output[0], ]
-
-        outputs = session.run(output_feed, input_feed)
-        if not forward_only:
-            return outputs[1], outputs[2], outputs[3]  # Gradient norm, loss, outputs.
-        else:
-            return None, outputs[0], outputs[1]  # No gradient norm, loss, outputs.
 
     def get_batch(self, data, bucket_id):
         """Get a random batch of data from the specified bucket, prepare for step.

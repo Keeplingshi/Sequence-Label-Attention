@@ -297,7 +297,6 @@ def train():
 
             current_step += 1
 
-            print("====================================================================")
             # Once in a while, we save checkpoint, print statistics, and run evals.
             if current_step % FLAGS.steps_per_checkpoint == 0:
 
@@ -311,16 +310,16 @@ def train():
                         for i in range(len(data_set[bucket_id])):
                             sample = model_test.get_one(data_set, bucket_id, i)
                             encoder_inputs, tags, tag_weights, sequence_length, _ = sample
-                            print("==================="+str(bucket_id)+"=================="+str(i)+"===========================")
-                            print("encoder_inputs")
-                            print(encoder_inputs)
-                            print("tags")
-                            print(tags)
-                            print("tag_weights")
-                            print(tag_weights)
-                            print("sequence_length")
-                            print(sequence_length)
-                            print("==================="+str(bucket_id)+"=================="+str(i)+"===========================")
+                            # print("==================="+str(bucket_id)+"=================="+str(i)+"===========================")
+                            # print("encoder_inputs")
+                            # print(encoder_inputs)
+                            # print("tags")
+                            # print(tags)
+                            # print("tag_weights")
+                            # print(tag_weights)
+                            # print("sequence_length")
+                            # print(sequence_length)
+                            # print("==================="+str(bucket_id)+"=================="+str(i)+"===========================")
 
                             _, step_loss, tagging_logits = model_test.tagging_step(sess, encoder_inputs, tags,
                                                                                    tag_weights, sequence_length,

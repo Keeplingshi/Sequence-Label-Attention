@@ -24,7 +24,7 @@ import tensorflow as tf
 
 import temp.data_utils as data_utils
 import temp.seq_labeling as seq_labeling
-import temp.seq_classification as seq_classification
+# import temp.seq_classification as seq_classification
 from tensorflow.contrib.rnn import BasicLSTMCell
 from tensorflow.contrib.rnn import MultiRNNCell
 from tensorflow.contrib.rnn import DropoutWrapper
@@ -72,30 +72,29 @@ class MultiTaskModel(object):
                 cell = MultiRNNCell([single_cell() for _ in range(self.num_layers)])
             return cell
 
+        # 创建rnn单元
         self.cell_fw = create_cell()
         self.cell_bw = create_cell()
 
-        # Feeds for inputs.
+        # Feeds for inputs. 定义输入数据
         self.encoder_inputs = []
         self.tags = []
         self.tag_weights = []
-        self.labels = []
-        self.sequence_length = tf.placeholder(tf.int32, [None],
-                                              name="sequence_length")
+        self.sequence_length = tf.placeholder(tf.int32, [None], name="sequence_length")
 
         for i in range(buckets[-1][0]):
-            self.encoder_inputs.append(tf.placeholder(tf.int32, shape=[None],
-                                                      name="encoder{0}".format(i)))
-        for i in range(buckets[-1][1]):
-            self.tags.append(tf.placeholder(tf.float32, shape=[None],
-                                            name="tag{0}".format(i)))
-            self.tag_weights.append(tf.placeholder(tf.float32, shape=[None],
-                                                   name="weight{0}".format(i)))
-        self.labels.append(tf.placeholder(tf.float32, shape=[None], name="label"))
+            self.encoder_inputs.append(tf.placeholder(tf.int32, shape=[None], name="encoder{0}".format(i)))
 
+        for i in range(buckets[-1][1]):
+            self.tags.append(tf.placeholder(tf.float32, shape=[None], name="tag{0}".format(i)))
+            self.tag_weights.append(tf.placeholder(tf.float32, shape=[None], name="weight{0}".format(i)))
+
+
+        # rnn的输出
         base_rnn_output = self.generate_rnn_output()
         encoder_outputs, encoder_state, attention_states = base_rnn_output
 
+        # 求 预测值和loss损失函数的过程
         seq_labeling_outputs = seq_labeling.generate_sequence_output(self.source_vocab_size,
                                                                      encoder_outputs,
                                                                      encoder_state,
@@ -130,52 +129,32 @@ class MultiTaskModel(object):
         """
         with tf.variable_scope("generate_seq_output"):
             # 双向rnn
-            if self.bidirectional_rnn:
-                embedding = tf.get_variable("embedding",
-                                            [self.source_vocab_size,
-                                             self.word_embedding_size])
-                encoder_emb_inputs = list()
-                encoder_emb_inputs = [tf.nn.embedding_lookup(embedding, encoder_input) for encoder_input in self.encoder_inputs]
+            embedding = tf.get_variable("embedding", [self.source_vocab_size, self.word_embedding_size])
+            # tf.nn.embedding_lookup(embedding, encoder_input)  在embedding中查找与encoder_input对应的表示。
+            encoder_emb_inputs = [tf.nn.embedding_lookup(embedding, encoder_input) for encoder_input in self.encoder_inputs]
+            print(encoder_emb_inputs)
+            print(np.array(encoder_emb_inputs).shape)
+            print(encoder_emb_inputs[0])
+            print(encoder_emb_inputs[0][0])
+            print(encoder_emb_inputs[0][0][0])
+            print("===============================================")
 
-                rnn_outputs = static_bidirectional_rnn(self.cell_fw,
-                                                       self.cell_bw,
-                                                       encoder_emb_inputs,
-                                                       sequence_length=self.sequence_length,
-                                                       dtype=tf.float32)
-                encoder_outputs, encoder_state_fw, encoder_state_bw = rnn_outputs
-                # with state_is_tuple = True, if num_layers > 1,
-                # here we simply use the state from last layer as the encoder state
-                state_fw = encoder_state_fw[-1]
-                state_bw = encoder_state_bw[-1]
-                encoder_state = tf.concat([tf.concat(state_fw, 1),
-                                           tf.concat(state_bw, 1)], 1)
-                top_states = [tf.reshape(e, [-1, 1, self.cell_fw.output_size \
-                                             + self.cell_bw.output_size])
-                              for e in encoder_outputs]
-                attention_states = tf.concat(top_states, 1)
-            # 单向rnn
-            else:
-                embedding = tf.get_variable("embedding",
-                                            [self.source_vocab_size,
-                                             self.word_embedding_size])
-                encoder_emb_inputs = list()
-                encoder_emb_inputs = [tf.nn.embedding_lookup(embedding, encoder_input) \
-                                      for encoder_input in self.encoder_inputs]
-                rnn_outputs = static_rnn(self.cell_fw,
-                                         encoder_emb_inputs,
-                                         sequence_length=self.sequence_length,
-                                         dtype=tf.float32)
-                encoder_outputs, encoder_state = rnn_outputs
-                # with state_is_tuple = True, if num_layers > 1,
-                # here we use the state from last layer as the encoder state
-                state = encoder_state[-1]
-                encoder_state = tf.concat(state, 1)
-                top_states = [tf.reshape(e, [-1, 1, self.cell_fw.output_size])
-                              for e in encoder_outputs]
-                attention_states = tf.concat(top_states, 1)
+            # encoder_emb_inputs是输入数据  数据格式和trigger_rnn一样  [sequence_length, batch_size, word_embedding_size]
+            rnn_outputs = static_bidirectional_rnn(self.cell_fw, self.cell_bw, encoder_emb_inputs,
+                                                   sequence_length=self.sequence_length, dtype=tf.float32)
+            encoder_outputs, encoder_state_fw, encoder_state_bw = rnn_outputs
+            # with state_is_tuple = True, if num_layers > 1,
+            # here we simply use the state from last layer as the encoder state
+            state_fw = encoder_state_fw[-1]
+            state_bw = encoder_state_bw[-1]
+            encoder_state = tf.concat([tf.concat(state_fw, 1), tf.concat(state_bw, 1)], 1)
+            top_states = [tf.reshape(e, [-1, 1, self.cell_fw.output_size + self.cell_bw.output_size]) for e in encoder_outputs]
+            attention_states = tf.concat(top_states, 1)
+
             return encoder_outputs, encoder_state, attention_states
 
 
+    # session.run
     def tagging_step(self, session, encoder_inputs, tags, tag_weights,
                      batch_sequence_length, bucket_id, forward_only):
         """Run a step of the tagging model feeding the given inputs.

@@ -13,6 +13,7 @@ import math
 import os
 import sys
 import time
+import logging
 
 import numpy as np
 # from six.moves import xrange  # pylint: disable=redefined-builtin
@@ -25,34 +26,21 @@ import argparse,pickle
 import subprocess
 import stat
 
-# tf.app.flags.DEFINE_float("learning_rate", 0.1, "Learning rate.")
-# tf.app.flags.DEFINE_float("learning_rate_decay_factor", 0.9,
-#                          "Learning rate decays by this much.")
-tf.app.flags.DEFINE_float("max_gradient_norm", 5.0, "Clip gradients to this norm.")
+tf.app.flags.DEFINE_float("learning_rate", 0.001, "Learning rate.")
+tf.app.flags.DEFINE_float("max_gradient_norm", 1.0, "Clip gradients to this norm.")
 tf.app.flags.DEFINE_integer("batch_size", 100, "Batch size to use during training.")
 tf.app.flags.DEFINE_integer("hidden_layers", 128, "Size of each model layer.")
 tf.app.flags.DEFINE_integer("target_size", 34, "class number.")
 tf.app.flags.DEFINE_integer("word_embedding_size", 300, "word embedding size")
 tf.app.flags.DEFINE_integer("num_layers", 1, "Number of layers in the model.")
-tf.app.flags.DEFINE_integer("in_vocab_size", 10000, "max vocab Size.")
-tf.app.flags.DEFINE_integer("out_vocab_size", 10000, "max tag vocab Size.")
 tf.app.flags.DEFINE_string("data_dir", "D:/Code/pycharm/Sequence-Label-Attention/main/data/trigger_data_form.data", "Data directory")
-tf.app.flags.DEFINE_string("train_dir", "tmp/", "Training directory.")
-tf.app.flags.DEFINE_integer("max_train_data_size", 0, "Limit on the size of training data (0: no limit)")
-tf.app.flags.DEFINE_integer("steps_per_checkpoint", 100, "How many training steps to do per checkpoint.")
-tf.app.flags.DEFINE_integer("max_training_steps", 30000, "Max training steps.")
-tf.app.flags.DEFINE_integer("max_test_data_size", 0, "Max size of test set.")
+tf.app.flags.DEFINE_string("saver_dir", "D:/Code/pycharm/Sequence-Label-Attention/main/saver/", "saver directory.")
 tf.app.flags.DEFINE_boolean("use_attention", True, "Use attention based RNN")
 tf.app.flags.DEFINE_integer("max_sequence_length", 60, "Max sequence length.")
-tf.app.flags.DEFINE_float("dropout_keep_prob", 0.5, "dropout keep cell input and output prob.")
+tf.app.flags.DEFINE_float("dropout_keep_prob", 1.0, "dropout keep cell input and output prob.")
 tf.app.flags.DEFINE_boolean("bidirectional_rnn", True, "Use birectional RNN")
-tf.app.flags.DEFINE_string("task", "tagging", "Options: joint; intent; tagging")
 tf.app.flags.DEFINE_integer("epoch", 100, "数据集共训练100次.")
 FLAGS = tf.app.flags.FLAGS
-
-if FLAGS.max_sequence_length == 0:
-    print('Please indicate max sequence length. Exit')
-    exit()
 
 
 def create_model(session):
@@ -67,6 +55,7 @@ def create_model(session):
             FLAGS.max_gradient_norm,
             FLAGS.batch_size,
             dropout_keep_prob=FLAGS.dropout_keep_prob,
+            learning_rate=FLAGS.learning_rate,
             forward_only=False,
             use_attention=FLAGS.use_attention,
             bidirectional_rnn=FLAGS.bidirectional_rnn)
@@ -84,13 +73,13 @@ def create_model(session):
     #         use_attention=FLAGS.use_attention,
     #         bidirectional_rnn=FLAGS.bidirectional_rnn)
 
-    ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
-    if ckpt and tf.gfile.Exists(ckpt.model_checkpoint_path):
-        print("Reading model parameters from %s" % ckpt.model_checkpoint_path)
-        model_train.saver.restore(session, ckpt.model_checkpoint_path)
-    else:
-        print("Created model with fresh parameters.")
-        session.run(tf.global_variables_initializer())
+    # ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
+    # if ckpt and tf.gfile.Exists(ckpt.model_checkpoint_path):
+    #     print("Reading model parameters from %s" % ckpt.model_checkpoint_path)
+    #     model_train.saver.restore(session, ckpt.model_checkpoint_path)
+    # else:
+    #     print("Created model with fresh parameters.")
+    session.run(tf.global_variables_initializer())
     return model_train
 
 
@@ -184,6 +173,9 @@ def train():
     with tf.Session(config=config) as sess:
 
         model = create_model(sess)
+
+        max_f_score=0
+
         # sys.exit()
         for e in range(FLAGS.epoch):
             for ptr in range(0, len(X_train), FLAGS.batch_size):
@@ -206,7 +198,19 @@ def train():
             # test 测试集计算
             test_pred = sess.run(model.tagging_output, {model.input_data:X_test, model.tags: tag_test
                     , model.tag_weights: Weights_test, model.sequence_length:L_test})
-            calculate_f_score(test_pred, tag_test, L_test, "test:"+str(e))
+            current_step_f_score=calculate_f_score(test_pred, tag_test, L_test, "test:"+str(e))
+            if max_f_score<current_step_f_score:
+                max_f_score=current_step_f_score
+                if max_f_score > 0.67:
+                    log_file_path = os.path.join(FLAGS.saver_dir+"model_"+str(max_f_score)+".log")
+                    log_file=open(log_file_path, "w")
+                    for k, v in FLAGS.__dict__['__flags'].items():
+                        write_str=str('%s: %s' % (k, str(v)))+"\n"
+                        log_file.write(write_str)
+                    log_file.close()
+                    checkpoint_path = os.path.join(FLAGS.saver_dir, "model_"+str(max_f_score)+".ckpt")
+                    model.saver.save(sess, checkpoint_path, global_step=model.global_step)
+            print("max_f_score: "+str(max_f_score))
 
 
 def main(_):

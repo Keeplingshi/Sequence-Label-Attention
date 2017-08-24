@@ -43,6 +43,7 @@ class MultiTaskModel(object):
                  max_gradient_norm, # clip_by_global_norm参数
                  batch_size,    # 每次训练多少条
                  dropout_keep_prob=1.0,     # dropout
+                 learning_rate=0.001,
                  bidirectional_rnn=True,
                  use_attention=False,
                  forward_only=False):
@@ -105,7 +106,7 @@ class MultiTaskModel(object):
         # Gradients and SGD update operation for training the model.
         params = tf.trainable_variables()
         if not forward_only:
-            opt = tf.train.AdamOptimizer()
+            opt = tf.train.AdamOptimizer(learning_rate)
             gradients = tf.gradients(self.tagging_loss, params)
 
             clipped_gradients, norm = tf.clip_by_global_norm(gradients,

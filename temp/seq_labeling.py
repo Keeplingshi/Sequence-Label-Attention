@@ -212,6 +212,19 @@ def generate_sequence_output(num_encoder_symbols,
             else:
                 assert len(logits) == len(targets)
                 bucket_target = [tf.reshape(tf.to_int64(x), [-1]) for x in targets]
+                print("===============sequenc_labeling_loss=============================")
+                print(bucket_target)
+                for tt in bucket_target:
+                    print(tt)
+                print("=================================================================")
+                print(logits)
+                for tt in logits:
+                    print(tt)
+                print("=================================================================")
+                print(weights)
+                for tt in weights:
+                    print(tt)
+                print("===============sequenc_labeling_loss=============================")
                 crossent = sequence_loss(
                     logits, bucket_target, weights,
                     softmax_loss_function=softmax_loss_function)

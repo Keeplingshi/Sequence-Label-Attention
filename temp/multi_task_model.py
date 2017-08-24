@@ -89,6 +89,12 @@ class MultiTaskModel(object):
             self.tags.append(tf.placeholder(tf.float32, shape=[None], name="tag{0}".format(i)))
             self.tag_weights.append(tf.placeholder(tf.float32, shape=[None], name="weight{0}".format(i)))
 
+        print("tag_weights======================================start ")
+        print(self.tag_weights)
+        print(np.array(self.tag_weights).shape)
+        print(self.tag_weights[0])
+        print(self.tag_weights[0][0])
+        print("tag_weights======================================end ")
 
         # rnn的输出
         base_rnn_output = self.generate_rnn_output()
@@ -177,6 +183,11 @@ class MultiTaskModel(object):
             target_weights disagrees with bucket size for the specified bucket_id.
         """
         # Check if the sizes match.
+
+        print("===============1=====================")
+        print(tags)
+        print(np.array(tags).shape)
+
         encoder_size, tag_size = self.buckets[bucket_id]
         if len(encoder_inputs) != encoder_size:
             raise ValueError("Encoder length must be equal to the one in bucket,"

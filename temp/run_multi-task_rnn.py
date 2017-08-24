@@ -256,6 +256,12 @@ def train():
         print("Max sequence length: %d." % _buckets[0][0])
         print("Creating %d layers of %d units." % (FLAGS.num_layers, FLAGS.size))
 
+        print(tag_vocab)
+        for (k,v) in tag_vocab.items():
+            print(k,v)
+        print(len(tag_vocab))
+        # sys.exit()
+
         model, model_test = create_model(sess, len(vocab), len(tag_vocab))
         print("Creating model with source_vocab_size=%d, target_vocab_size=%d." % (len(vocab), len(tag_vocab)))
 
@@ -290,12 +296,31 @@ def train():
             batch_data = model.get_batch(train_set, bucket_id)
             # 获取输入数据，标注等
             encoder_inputs, tags, tag_weights, batch_sequence_length, _ = batch_data
+            # print("====================train_data====================")
+            # # print(tag_weights)
+            # print(tags)
+            # print(np.array(tags).shape)
+            # for ttt in range(len(tags)):
+            #     print(tags[ttt])
+            # print(batch_sequence_length)
+            # print(np.array(tag_weights).shape)
+            # for tt in range(len(tag_weights)):
+            #     print(tag_weights[tt])
+            # print("====================train_data====================")
+
 
             # loss损失函数值，
             _, step_loss, tagging_logits = model.tagging_step(sess, encoder_inputs, tags, tag_weights,
                                                               batch_sequence_length, bucket_id, False)
 
             current_step += 1
+
+            # print("====================model.tag_weights====================")
+            # print(model.tag_weights)
+            # print(np.array(model.tag_weights).shape)
+            # print(model.tag_weights[0])
+            # print(model.tag_weights[0][0])
+            # print("====================model.tag_weights====================")
 
             # Once in a while, we save checkpoint, print statistics, and run evals.
             if current_step % FLAGS.steps_per_checkpoint == 0:

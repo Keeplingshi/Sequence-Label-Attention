@@ -33,7 +33,7 @@ tf.app.flags.DEFINE_integer("hidden_layers", 128, "Size of each model layer.")
 tf.app.flags.DEFINE_integer("target_size", 34, "class number.")
 tf.app.flags.DEFINE_integer("word_embedding_size", 300, "word embedding size")
 tf.app.flags.DEFINE_integer("num_layers", 1, "Number of layers in the model.")
-tf.app.flags.DEFINE_string("data_dir", "D:/Code/pycharm/Sequence-Label-Attention/main/data/trigger_data_form.data", "Data directory")
+tf.app.flags.DEFINE_string("data_dir", "D:/Code/pycharm/Sequence-Label-Attention/data_prepare/data/trigger_data_form.data", "Data directory")
 tf.app.flags.DEFINE_string("saver_dir", "D:/Code/pycharm/Sequence-Label-Attention/main/saver/", "saver directory.")
 tf.app.flags.DEFINE_boolean("use_attention", True, "Use attention based RNN")
 tf.app.flags.DEFINE_integer("max_sequence_length", 60, "Max sequence length.")
@@ -186,11 +186,11 @@ def train():
                 Weights_batch_data=Weights_train[ptr:ptr + FLAGS.batch_size]
                 W_batch_data=W_train[ptr:ptr + FLAGS.batch_size]
 
-                sess.run(model.update, {model.input_data:X_batch_data, model.tags: tag_batch_data
-                    , model.tag_weights: Weights_batch_data, model.sequence_length:L_batch_data})
+                sess.run(model.update, {model.input_data:X_batch_data, model.tags: tag_batch_data,
+                                        model.tag_weights: Weights_batch_data, model.sequence_length:L_batch_data})
 
             if e % 10 == 0:
-                test_num=1000
+                test_num = 1000
                 pred = sess.run(model.tagging_output, {model.input_data:X_train[:test_num], model.tags: tag_train[:test_num]
                     , model.tag_weights: Weights_train[:test_num], model.sequence_length:L_train[:test_num]})
 
@@ -202,7 +202,7 @@ def train():
             current_step_f_score=calculate_f_score(test_pred, tag_test, L_test, "test:"+str(e))
             if max_f_score<current_step_f_score:
                 max_f_score=current_step_f_score
-                if max_f_score > 0.68:
+                if max_f_score > 0.6:
                     log_file_path = os.path.join(FLAGS.saver_dir+"model_"+str(max_f_score)+".log")
                     log_file=open(log_file_path, "w")
                     for k, v in FLAGS.__dict__['__flags'].items():

@@ -33,7 +33,7 @@ from tensorflow.contrib.rnn import static_bidirectional_rnn
 import sys
 
 
-class MultiTaskModel(object):
+class SequenceModel(object):
     def __init__(self,
                  sentence_length,   # 补零截取后的句子长度，固定值，60
                  tag_size,    # 类别个数 class_num

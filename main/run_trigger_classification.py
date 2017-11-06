@@ -20,7 +20,7 @@ import numpy as np
 import tensorflow as tf
 
 # import main.data_utils as data_utils
-import main.multi_task_model as multi_task_model
+import main.sequence_model as sequence_model
 import argparse,pickle
 
 import subprocess
@@ -29,7 +29,7 @@ import stat
 tf.app.flags.DEFINE_float("learning_rate", 0.001, "Learning rate.")
 tf.app.flags.DEFINE_float("max_gradient_norm", 1.0, "Clip gradients to this norm.")
 tf.app.flags.DEFINE_integer("batch_size", 100, "Batch size to use during training.")
-tf.app.flags.DEFINE_integer("hidden_layers", 256, "Size of each model layer.")
+tf.app.flags.DEFINE_integer("hidden_layers", 128, "Size of each model layer.")
 tf.app.flags.DEFINE_integer("target_size", 34, "class number.")
 tf.app.flags.DEFINE_integer("word_embedding_size", 300, "word embedding size")
 tf.app.flags.DEFINE_integer("num_layers", 1, "Number of layers in the model.")
@@ -46,7 +46,7 @@ FLAGS = tf.app.flags.FLAGS
 def create_model(session):
     """Create model and initialize or load parameters in session."""
     with tf.variable_scope("model", reuse=None):
-        model_train = multi_task_model.MultiTaskModel(
+        model_train = sequence_model.SequenceModel(
             FLAGS.max_sequence_length,
             FLAGS.target_size,
             FLAGS.word_embedding_size,
@@ -59,19 +59,20 @@ def create_model(session):
             forward_only=False,
             use_attention=FLAGS.use_attention,
             bidirectional_rnn=FLAGS.bidirectional_rnn)
-    # with tf.variable_scope("model", reuse=True):
-    #     model_test = multi_task_model.MultiTaskModel(
-    #         FLAGS.max_sequence_length,
-    #         target_vocab_size,
-    #         FLAGS.word_embedding_size,
-    #         FLAGS.size,
-    #         FLAGS.num_layers,
-    #         FLAGS.max_gradient_norm,
-    #         FLAGS.batch_size,
-    #         dropout_keep_prob=FLAGS.dropout_keep_prob,
-    #         forward_only=True,
-    #         use_attention=FLAGS.use_attention,
-    #         bidirectional_rnn=FLAGS.bidirectional_rnn)
+    with tf.variable_scope("model", reuse=True):
+        model_test = sequence_model.SequenceModel(
+            FLAGS.max_sequence_length,
+            FLAGS.target_size,
+            FLAGS.word_embedding_size,
+            FLAGS.hidden_layers,
+            FLAGS.num_layers,
+            FLAGS.max_gradient_norm,
+            FLAGS.batch_size,
+            dropout_keep_prob=FLAGS.dropout_keep_prob,
+            learning_rate=FLAGS.learning_rate,
+            forward_only=True,
+            use_attention=FLAGS.use_attention,
+            bidirectional_rnn=FLAGS.bidirectional_rnn)
 
     # ckpt = tf.train.get_checkpoint_state(FLAGS.train_dir)
     # if ckpt and tf.gfile.Exists(ckpt.model_checkpoint_path):
@@ -80,7 +81,7 @@ def create_model(session):
     # else:
     #     print("Created model with fresh parameters.")
     session.run(tf.global_variables_initializer())
-    return model_train
+    return model_train, model_test
 
 
 def calculate_f_score(prediction, target, seq_length, iter_num):
@@ -172,7 +173,7 @@ def train():
 
     with tf.Session(config=config) as sess:
 
-        model = create_model(sess)
+        model, model_test = create_model(sess)
 
         max_f_score=0
 
@@ -196,8 +197,8 @@ def train():
                 calculate_f_score(pred,tag_train[:test_num],L_train[:test_num], "train:"+str(e))
 
             # test 测试集计算
-            test_pred = sess.run(model.tagging_output, {model.input_data:X_test, model.tags: tag_test
-                    , model.tag_weights: Weights_test, model.sequence_length:L_test})
+            test_pred = sess.run(model_test.tagging_output, {model_test.input_data:X_test, model_test.tags: tag_test
+                    , model_test.tag_weights: Weights_test, model_test.sequence_length:L_test})
             current_step_f_score=calculate_f_score(test_pred, tag_test, L_test, "test:"+str(e))
             if max_f_score<current_step_f_score:
                 max_f_score=current_step_f_score

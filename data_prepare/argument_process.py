@@ -231,9 +231,12 @@ def deal_ace_event(flag):
     for ace_event in event_list:
         # print(ace_event.toString())
         sen_split_list=[]
+        tag_split_list=[]
         sen_split_list.append(ace_event.text)
+        tag_split_list.append(None)
         for i,event_argument in enumerate(ace_event.argument):
-            sen_split_list=argu_split_sentence(sen_split_list,ace_event.argument_start[i],ace_event.argument_end[i]+1)
+            sen_split_list,tag_split_list=argu_split_sentence(sen_split_list,tag_split_list,ace_event.argument_type[i],ace_event.argument_start[i],ace_event.argument_end[i]+1)
+
 
         if ''.join(sen_split_list)!=ace_event.text:
             pass
@@ -266,9 +269,11 @@ def get_word2vec():
     return wordvec
 
 
-def argu_split_sentence(sentence_list,num_start,num_end):
+def argu_split_sentence(sentence_list,tag_list,argument_type,num_start,num_end):
+    assert len(sentence_list)==len(tag_list),"len(sentence_list)!=len(tag_list)"
     assert num_start<num_end,"num_start<num_end"
     split_list = []
+    tag_split_list=[]
     if type(sentence_list) == list:
         split_index=-1
         split_start=0
@@ -280,14 +285,23 @@ def argu_split_sentence(sentence_list,num_start,num_end):
                 split_index=index
                 break
         split_list.extend(sentence_list[:split_index])
+        tag_split_list.extend(tag_list[:split_index])
+
         num_start-=split_start
         num_end-=split_start
         sentence=sentence_list[split_index]
+
         split_list.append(sentence[:num_start])
+        tag_split_list.append(None)
         split_list.append(sentence[num_start:num_end])
+        tag_split_list.append(argument_type)
         split_list.append(sentence[num_end:])
+        tag_split_list.append(None)
+
         split_list.extend(sentence_list[split_index+1:])
-    return split_list
+        tag_split_list.extend(tag_list[split_index+1:])
+
+    return split_list,tag_split_list
 
 
 if __name__ == "__main__":
@@ -296,17 +310,21 @@ if __name__ == "__main__":
     # ace_info_list = extract_ace_info(acepath + "AFP_ENG_20030401.0476.apf.xml")
     # for ace_event in ace_info_list:
     #     sen_split_list=[]
+    #     tag_split_list=[]
     #     sen_split_list.append(ace_event.text)
+    #     tag_split_list.append(None)
     #     for i,event_argument in enumerate(ace_event.argument):
-    #         sen_split_list=argu_split_sentence(sen_split_list,ace_event.argument_start[i],ace_event.argument_end[i]+1)
+    #         sen_split_list,tag_split_list=argu_split_sentence(sen_split_list,tag_split_list,ace_event.argument_type[i],ace_event.argument_start[i],ace_event.argument_end[i]+1)
     #
-    #     # print(sen_split_list)
-    #     # print(''.join(sen_split_list))
-    #     if ''.join(sen_split_list)!=ace_event.text:
-    #         if ''.join(sen_split_list)==ace_event.text+ace_event.text:
-    #             print("11111111")
-    #         else:
-    #             print("2222222")
+    #     print(sen_split_list)
+    #     print(tag_split_list)
+    #     print("=========================================================")
+        # print(''.join(sen_split_list))
+        # if ''.join(sen_split_list)!=ace_event.text:
+        #     if ''.join(sen_split_list)==ace_event.text+ace_event.text:
+        #         print("11111111")
+        #     else:
+        #         print("2222222")
 
             # print(ace_event.toString())
             # print(''.join(sen_split_list))

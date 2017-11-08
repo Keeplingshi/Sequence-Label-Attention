@@ -27,8 +27,13 @@ doclist_full = sourcepath + "split1.0/ACE_full_filelist"
 data_save_path = "D:/Code/pycharm/Sequence-Label-Attention/data_prepare/data/argument_data.data"
 form_data_save_path = "D:/Code/pycharm/Sequence-Label-Attention/data_prepare/data/argument_data_form.data"
 
+argument_save_txt="D:/Code/pycharm/Sequence-Label-Attention/data_prepare/data/argument_raw/argument_"
+
 word2vec_file = sourcepath+'/word2vec/wordvector'
 wordlist_file = sourcepath+'/word2vec/wordlist'
+
+ACE_EVENT_Trigger_Type=[None, 'Trigger_Transport', 'Trigger_Elect', 'Trigger_Start-Position', 'Trigger_Nominate', 'Trigger_Attack', 'Trigger_End-Position', 'Trigger_Meet', 'Trigger_Marry', 'Trigger_Phone-Write', 'Trigger_Transfer-Money', 'Trigger_Sue', 'Trigger_Demonstrate', 'Trigger_End-Org', 'Trigger_Injure', 'Trigger_Die', 'Trigger_Arrest-Jail', 'Trigger_Transfer-Ownership', 'Trigger_Start-Org', 'Trigger_Execute', 'Trigger_Trial-Hearing', 'Trigger_Sentence', 'Trigger_Be-Born', 'Trigger_Charge-Indict', 'Trigger_Convict', 'Trigger_Declare-Bankruptcy', 'Trigger_Release-Parole', 'Trigger_Fine', 'Trigger_Pardon', 'Trigger_Appeal', 'Trigger_Merge-Org', 'Trigger_Extradite', 'Trigger_Divorce', 'Trigger_Acquit']
+ACE_EVENT_Argument_Type=[None, 'Argument_Vehicle', 'Argument_Artifact', 'Argument_Destination', 'Argument_Agent', 'Argument_Person', 'Argument_Position', 'Argument_Entity', 'Argument_Attacker', 'Argument_Place', 'Argument_Time-At-Beginning', 'Argument_Target', 'Argument_Giver', 'Argument_Recipient', 'Argument_Plaintiff', 'Argument_Money', 'Argument_Victim', 'Argument_Time-Within', 'Argument_Buyer', 'Argument_Time-Ending', 'Argument_Instrument', 'Argument_Seller', 'Argument_Origin', 'Argument_Time-Holds', 'Argument_Org', 'Argument_Time-At-End', 'Argument_Time-Before', 'Argument_Time-Starting', 'Argument_Time-After', 'Argument_Beneficiary', 'Argument_Defendant', 'Argument_Adjudicator', 'Argument_Sentence', 'Argument_Crime', 'Argument_Prosecutor', 'Argument_Price']
 
 
 # 定义存储ACE事件的类
@@ -222,35 +227,6 @@ def encode_corpus(flag):
     return ace_list
 
 
-
-def deal_ace_event(flag):
-
-    event_list=encode_corpus(flag)
-    print(len(event_list))
-
-    for ace_event in event_list:
-        # print(ace_event.toString())
-        sen_split_list=[]
-        tag_split_list=[]
-        sen_split_list.append(ace_event.text)
-        tag_split_list.append(None)
-        for i,event_argument in enumerate(ace_event.argument):
-            sen_split_list,tag_split_list=argu_split_sentence(sen_split_list,tag_split_list,ace_event.argument_type[i],ace_event.argument_start[i],ace_event.argument_end[i]+1)
-
-
-        if ''.join(sen_split_list)!=ace_event.text:
-            pass
-        #     print(ace_event.toString())
-        else:
-            for event_argument in ace_event.argument:
-                if event_argument not in sen_split_list:
-                    print(ace_event.toString())
-                    print(event_argument)
-                    print(sen_split_list)
-                    print("=========================================")
-
-
-
 def get_word2vec():
 
     wordvec = {}
@@ -304,8 +280,167 @@ def argu_split_sentence(sentence_list,tag_list,argument_type,num_start,num_end):
     return split_list,tag_split_list
 
 
+"""
+将事件写入到txt文件
+"""
+def deal_ace_event(flag):
+
+    event_list=encode_corpus(flag)
+    print(len(event_list))
+    # event_file = open(argument_save_txt+flag, 'w')
+
+    for ace_event in event_list:
+
+        record_flag=True
+
+        sen_split_list=[]
+        tag_split_list=[]
+        sen_split_list.append(ace_event.text)
+        tag_split_list.append(None)
+        for i,event_argument in enumerate(ace_event.argument):
+            sen_split_list,tag_split_list=argu_split_sentence(sen_split_list,tag_split_list,"Argument_"+ace_event.argument_type[i],ace_event.argument_start[i],ace_event.argument_end[i]+1)
+
+        sen_split_list, tag_split_list = argu_split_sentence(sen_split_list, tag_split_list, "Trigger_"+ace_event.trigger_sub_type,
+                                                             ace_event.trigger_start, ace_event.trigger_end + 1)
+
+        if ''.join(sen_split_list)!=ace_event.text:
+            record_flag=False
+        else:
+            for event_argument in ace_event.argument:
+                if event_argument not in sen_split_list:
+                    record_flag=False
+
+        if record_flag:
+            print(sen_split_list)
+            print(tag_split_list)
+
+
+
+        # if record_flag:
+        #     event_file.write(str(sen_split_list))
+        #     event_file.write('\n')
+        #     event_file.write(str(tag_split_list))
+        #     event_file.write('\n')
+        # else:
+        #     print(ace_event.toString())
+
+    # event_file.close()
+
+
+# def read_event_file(flag):
+#     event_file = open(argument_save_txt + flag, 'r')
+#     for index,line in enumerate(event_file.readlines()):
+#         sen_split_list=line.strip()
+#         print(sen_split_list)
+#         print(type(sen_split_list))
+        # for i in sen_split_list:
+        #     print(i)
+    # for index,line in enumerate(event_file):
+    #     sen_split_list=line
+    #     print(sen_split_list)
+    #     if type(sen_split_list) == list:
+    #         print("111111111111")
+        # for i in sen_split_list:
+        #     print(i)
+        # print(index,sen_split_list)
+
+def get_word_tag_list(sen_list,tag_list):
+    word_result_list=[]
+    tag_result_list=[]
+
+    for index,(phrase,tag) in enumerate(zip(sen_list,tag_list)):
+        phrase=clean_str(phrase).split()
+        for word in phrase:
+            word_result_list.append(word)
+            tag_result_list.append(tag)
+
+    return word_result_list,tag_result_list
+
+
+# def get_dot_word():
+#
+#     wordlist_f=open(wordlist_file,'r')
+#     word_dot_list=dict()
+#     for line in wordlist_f:
+#         word=line.strip()
+#         if "." in word:
+#             if "."!=word and "..."!=word:
+#                 temp=word
+#                 word_dot_list[temp.replace("."," <dot> ")]=word
+#     return word_dot_list
+#
+# word_dot_list=get_dot_word()
+#
+# def number_form(s):
+#     num_list = re.findall("\d+\s,\s\d+", s)
+#     for re_num in num_list:
+#         s = s.replace(re_num, re_num.replace(" ", ""))
+#
+#     print("=================================")
+#     print(s)
+#     if s in word_dot_list.keys():
+#         print(s)
+#         print("1111111111111111111111111")
+#         s=word_dot_list.get(s)
+#     return s
+
+
+def clean_str(string, TREC=False):
+    string = re.sub(r"[^A-Za-z0-9(),.!?\'\`<>]-", " ", string)
+    string = re.sub(r"\'m", r" 'm", string)
+    string = re.sub(r"\'s", " \'s", string)
+    string = re.sub(r"\'ve", " \'ve", string)
+    string = re.sub(r"n\'t", " n\'t", string)
+    string = re.sub(r"\'re", " \'re", string)
+    string = re.sub(r"\'d", " \'d", string)
+    string = re.sub(r"\'ll", " \'ll", string)
+    # string = re.sub(r"\.", " . ", string)
+    string = re.sub(r"\,", r" , ", string)
+    string = re.sub(r"!", " ! ", string)
+    string = re.sub(r"\(", " ( ", string)
+    string = re.sub(r"\)", " ) ", string)
+    string = re.sub(r"\?", " ? ", string)
+    string = re.sub(r"\s{2,}", " ", string)
+
+    # string=number_form(string)
+    return string.strip() if TREC else string.strip().lower()
+
+
 if __name__ == "__main__":
-    deal_ace_event("full")
+    # sen_list=['Former senior banker ', 'Callum McCarthy', ' ', 'begins', ' what is ',"one of the most important jobs in London's financial world", ' in ', 'September', ', when incumbent Howard Davies steps down']
+    # tag_list=[None, 'Argument_Person', None, 'Trigger_Start-Position', None, 'Argument_Position', None, 'Argument_Time-Within',None]
+
+    sen_list =['', 'Iraqis', ' mostly ', 'fought', ' back with small ', 'arms', ', ', 'pistols', ', machine ', 'guns',' and rocket-propelled ', 'grenades', '']
+    tag_list =[None, 'Argument_Attacker', None, 'Trigger_Attack', None, 'Argument_Instrument', None, 'Argument_Instrument', None, 'Argument_Instrument', None, 'Argument_Instrument', None]
+    #
+    # sen_list=['The ', 'EU', ' is set to ', 'release', ' ', '20 million euros (US$21.5 million',') in immediate humanitarian aid for ', 'Iraq'," if war breaks out and may dip into an ``emergency reserve'' of 250 million euros (US$269 million) for humanitarian relief"]
+    # tag_list=[None, 'Argument_Giver', None, 'Trigger_Transfer-Money', None, 'Argument_Money', None, 'Argument_Beneficiary', None]
+
+    word_result_list, tag_result_list=get_word_tag_list(sen_list,tag_list)
+
+    # print(sen_list)
+    # print(tag_list)
+    #
+    # word_result_list=[]
+    # tag_result_list=[]
+    #
+    # for index,(phrase,tag) in enumerate(zip(sen_list,tag_list)):
+    #     phrase=clean_str(phrase).split()
+    #     for word in phrase:
+    #         word_result_list.append(word)
+    #         tag_result_list.append(tag)
+    #     # print(index,phrase,tag)
+    print(word_result_list)
+    print(tag_result_list)
+
+
+    # pass
+
+    # read_event_file("test")
+
+    # deal_ace_event("dev")
+    # deal_ace_event("train")
+    # deal_ace_event("test")
 
     # ace_info_list = extract_ace_info(acepath + "AFP_ENG_20030401.0476.apf.xml")
     # for ace_event in ace_info_list:
@@ -319,18 +454,18 @@ if __name__ == "__main__":
     #     print(sen_split_list)
     #     print(tag_split_list)
     #     print("=========================================================")
-        # print(''.join(sen_split_list))
-        # if ''.join(sen_split_list)!=ace_event.text:
-        #     if ''.join(sen_split_list)==ace_event.text+ace_event.text:
-        #         print("11111111")
-        #     else:
-        #         print("2222222")
-
-            # print(ace_event.toString())
-            # print(''.join(sen_split_list))
-            # print(ace_event.text)
-            # print("====================================================")
-
-
-
+    #     print(''.join(sen_split_list))
+    #     if ''.join(sen_split_list)!=ace_event.text:
+    #         if ''.join(sen_split_list)==ace_event.text+ace_event.text:
+    #             print("11111111")
+    #         else:
+    #             print("2222222")
+    #
+    #         print(ace_event.toString())
+    #         print(''.join(sen_split_list))
+    #         print(ace_event.text)
+    #         print("====================================================")
+    #
+    #
+    #
     # ace_list=get_ace_event_list(path)

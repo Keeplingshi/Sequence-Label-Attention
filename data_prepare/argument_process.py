@@ -71,48 +71,9 @@ class ACE_info:
 def extract_ace_info(apf_file):
     # 存储事件实体的list
     R = []
-    doc = minidom.parse(apf_file)#从xml文件得到doc对象
-    root = doc.documentElement#获得根对象source_file
-    entity = {}
-    # 获取实体提及
-    entity_nodes = xml_parse_base.get_xmlnode(None, root, 'entity')
-    for entity_node in entity_nodes:
-        entity_type = xml_parse_base.get_attrvalue(None, entity_node, 'SUBTYPE')
-        entity_mention_nodes = xml_parse_base.get_xmlnode(None, entity_node, 'entity_mention')
-        for entity_mention_node in entity_mention_nodes:
-            entity_mention_id = xml_parse_base.get_attrvalue(None, entity_mention_node, 'ID')
-            entity_mention_head = xml_parse_base.get_xmlnode(None, entity_mention_node, 'head')
-            entity_mention_head_charseq = xml_parse_base.get_xmlnode(None, entity_mention_head[0], 'charseq')
-            for charse in entity_mention_head_charseq:
-                entity_mention_start = xml_parse_base.get_attrvalue(None,charse, 'START')
-                entity_mention_end = xml_parse_base.get_attrvalue(None, charse, 'END')
-                entity[entity_mention_id] = [entity_mention_start, entity_mention_end, entity_type]
-    #获得value提及
-    value_nodes = xml_parse_base.get_xmlnode(None, root, 'value')
-    for value_node in value_nodes:
-        value_type = xml_parse_base.get_attrvalue(None, value_node, 'TYPE')
-        value_mention_nodes = xml_parse_base.get_xmlnode(None, value_node, 'value_mention')
-        for value_mention_node in value_mention_nodes:
-            value_mention_id = xml_parse_base.get_attrvalue(None, value_mention_node, 'ID')
-            value_mention_extent = xml_parse_base.get_xmlnode(None, value_mention_node, 'extent')
-            value_mention_extent_charseq = xml_parse_base.get_xmlnode(None, value_mention_extent[0], 'charseq')
-            for charse in value_mention_extent_charseq:
-                value_mention_start = xml_parse_base.get_attrvalue(None,charse, 'START')
-                value_mention_end = xml_parse_base.get_attrvalue(None, charse, 'END')
-                entity[value_mention_id] = [value_mention_start,value_mention_end,value_type]
-    #获得time提及
-    timex2_nodes = xml_parse_base.get_xmlnode(None, root, 'timex2')
-    for timex2_node in timex2_nodes:
-        timex2_mention_nodes = xml_parse_base.get_xmlnode(None, timex2_node, 'timex2_mention')
-        for timex2_mention_node in timex2_mention_nodes:
-            timex2_mention_id = xml_parse_base.get_attrvalue(None, timex2_mention_node, 'ID')
-            timex2_mention_extent = xml_parse_base.get_xmlnode(None, timex2_mention_node, 'extent')
-            timex2_mention_extent_charseq = xml_parse_base.get_xmlnode(None, timex2_mention_extent[0], 'charseq')
-            for charse in timex2_mention_extent_charseq:
-                timex2_mention_start = xml_parse_base.get_attrvalue(None,charse, 'START')
-                timex2_mention_end = xml_parse_base.get_attrvalue(None, charse, 'END')
-                entity[timex2_mention_id] = [timex2_mention_start,timex2_mention_end,'timex2']
 
+    doc = minidom.parse(apf_file)
+    root = doc.documentElement
 
     event_nodes = xml_parse_base.get_xmlnode(None, root, 'event')#获得对象名为event的节点列表
     for node in event_nodes:
@@ -131,7 +92,6 @@ def extract_ace_info(apf_file):
             text_str = xml_parse_base.get_nodevalue(None, mention_ldc_scope_charseq[0], 0).replace("\n", " ")
             R_element.text = text_str
             s = None
-            m = 0
             #text开始均为0
             for charse in mention_ldc_scope_charseq:
                 start = xml_parse_base.get_attrvalue(None,charse, 'START')#charseq的START属性值
@@ -139,15 +99,6 @@ def extract_ace_info(apf_file):
                 s = start
                 R_element.text_start = 0
                 R_element.text_end = int(end)-int(start)
-                for j, x in enumerate(entity):
-                    #print entity[x][0]
-                    if int(entity[x][0])>=int(start) and int(entity[x][1])<=int(end):
-                        R_element.entity_start.append(int(entity[x][0]) - int(s))
-                        #print R_element.entity_start
-                        R_element.entity_end.append(int(entity[x][1]) - int(s))
-                        R_element.entity_type.append(entity[x][2])
-                        R_element.entity.append(R_element.text[R_element.entity_start[m]:R_element.entity_end[m]+1])
-                        m+=1
 
 
             # 获取事件触发词
@@ -160,40 +111,152 @@ def extract_ace_info(apf_file):
                 R_element.trigger_end = int(end)-int(s)
                 R_element.trigger = R_element.text[R_element.trigger_start:R_element.trigger_end+1]#begin 这样的
 
-
-
             # 获取事件元素
             mention_arguments = xml_parse_base.get_xmlnode(None, mention_node, 'event_mention_argument')#event_mention_argument列表
             i = 0
-            arg = []
             for mention_argument in mention_arguments:
-                mention_argument_refid = xml_parse_base.get_attrvalue(None,mention_argument, 'REFID')
-                #mention_argument_extent = get_xmlnode(None, mention_argument, 'extent')
-                #mention_argument_charseq = get_xmlnode(None, mention_argument_extent[0], 'charseq')
-                try:
-                    argument_position = entity[mention_argument_refid]
-                    start = argument_position[0]
-                    end = argument_position[1]
-                    entity_type = argument_position[2]
-                except KeyError:
-                    print ('error')
-                    mention_argument_extent = xml_parse_base.get_xmlnode(None, mention_argument, 'extent')
-                    mention_argument_charseq = xml_parse_base.get_xmlnode(None, mention_argument_extent[0], 'charseq')
-                    for argument_charse in mention_argument_charseq:
-                        start = xml_parse_base.get_attrvalue(None,argument_charse, 'START')
-                        end = xml_parse_base.get_attrvalue(None, argument_charse, 'END')
-                        entity_type = None
+                mention_argument_extent = xml_parse_base.get_xmlnode(None, mention_argument, 'extent')
+                mention_argument_charseq = xml_parse_base.get_xmlnode(None, mention_argument_extent[0], 'charseq')
+                for argument_charse in mention_argument_charseq:
+                    start = xml_parse_base.get_attrvalue(None,argument_charse, 'START')
+                    end = xml_parse_base.get_attrvalue(None, argument_charse, 'END')
 
                 R_element.argument_start.append(int(start) - int(s))#多个事件元素
                 R_element.argument_end.append( int(end) - int(s))
                 R_element.argument.append(R_element.text[R_element.argument_start[i]:R_element.argument_end[i]+1])
-                #arg.append(get_nodevalue(None, mention_argument_charseq[0], 0).replace("\n", " "))#事件元素列表
-                R_element.argument_entity_type.append(entity_type)
                 R_element.argument_type.append(xml_parse_base.get_attrvalue(None, mention_argument, 'ROLE'))#事件元素类型
                 i+=1
 
             R.append(R_element)
+
     return R
+
+
+    # # 存储事件实体的list
+    # R = []
+    # doc = minidom.parse(apf_file)#从xml文件得到doc对象
+    # root = doc.documentElement#获得根对象source_file
+    # entity = {}
+    # # 获取实体提及
+    # entity_nodes = xml_parse_base.get_xmlnode(None, root, 'entity')
+    # for entity_node in entity_nodes:
+    #     entity_type = xml_parse_base.get_attrvalue(None, entity_node, 'SUBTYPE')
+    #     entity_mention_nodes = xml_parse_base.get_xmlnode(None, entity_node, 'entity_mention')
+    #     for entity_mention_node in entity_mention_nodes:
+    #         entity_mention_id = xml_parse_base.get_attrvalue(None, entity_mention_node, 'ID')
+    #         entity_mention_head = xml_parse_base.get_xmlnode(None, entity_mention_node, 'head')
+    #         entity_mention_head_charseq = xml_parse_base.get_xmlnode(None, entity_mention_head[0], 'charseq')
+    #         for charse in entity_mention_head_charseq:
+    #             entity_mention_start = xml_parse_base.get_attrvalue(None,charse, 'START')
+    #             entity_mention_end = xml_parse_base.get_attrvalue(None, charse, 'END')
+    #             entity[entity_mention_id] = [entity_mention_start, entity_mention_end, entity_type]
+    # #获得value提及
+    # value_nodes = xml_parse_base.get_xmlnode(None, root, 'value')
+    # for value_node in value_nodes:
+    #     value_type = xml_parse_base.get_attrvalue(None, value_node, 'TYPE')
+    #     value_mention_nodes = xml_parse_base.get_xmlnode(None, value_node, 'value_mention')
+    #     for value_mention_node in value_mention_nodes:
+    #         value_mention_id = xml_parse_base.get_attrvalue(None, value_mention_node, 'ID')
+    #         value_mention_extent = xml_parse_base.get_xmlnode(None, value_mention_node, 'extent')
+    #         value_mention_extent_charseq = xml_parse_base.get_xmlnode(None, value_mention_extent[0], 'charseq')
+    #         for charse in value_mention_extent_charseq:
+    #             value_mention_start = xml_parse_base.get_attrvalue(None,charse, 'START')
+    #             value_mention_end = xml_parse_base.get_attrvalue(None, charse, 'END')
+    #             entity[value_mention_id] = [value_mention_start,value_mention_end,value_type]
+    # #获得time提及
+    # timex2_nodes = xml_parse_base.get_xmlnode(None, root, 'timex2')
+    # for timex2_node in timex2_nodes:
+    #     timex2_mention_nodes = xml_parse_base.get_xmlnode(None, timex2_node, 'timex2_mention')
+    #     for timex2_mention_node in timex2_mention_nodes:
+    #         timex2_mention_id = xml_parse_base.get_attrvalue(None, timex2_mention_node, 'ID')
+    #         timex2_mention_extent = xml_parse_base.get_xmlnode(None, timex2_mention_node, 'extent')
+    #         timex2_mention_extent_charseq = xml_parse_base.get_xmlnode(None, timex2_mention_extent[0], 'charseq')
+    #         for charse in timex2_mention_extent_charseq:
+    #             timex2_mention_start = xml_parse_base.get_attrvalue(None,charse, 'START')
+    #             timex2_mention_end = xml_parse_base.get_attrvalue(None, charse, 'END')
+    #             entity[timex2_mention_id] = [timex2_mention_start,timex2_mention_end,'timex2']
+    #
+    #
+    # event_nodes = xml_parse_base.get_xmlnode(None, root, 'event')#获得对象名为event的节点列表
+    # for node in event_nodes:
+    #     # 获取事件mention
+    #     mention_nodes = xml_parse_base.get_xmlnode(None, node, 'event_mention')#获得对象名为event_mention的节点列表
+    #     for mention_node in mention_nodes:
+    #         R_element = ACE_info()
+    #         # 获取事件id
+    #         R_element.id = xml_parse_base.get_attrvalue(None, mention_node, 'ID')#获得event_mention的ID属性值
+    #         # 获取事件子类型
+    #         R_element.trigger_sub_type = xml_parse_base.get_attrvalue(None, node, 'SUBTYPE')#获得event的SUBTYPE属性值
+    #         # 获取事件所在语句
+    #         mention_ldc_scope = xml_parse_base.get_xmlnode(None, mention_node, 'ldc_scope')#获得ldc_scope列表
+    #         mention_ldc_scope_charseq = xml_parse_base.get_xmlnode(None, mention_ldc_scope[0], 'charseq')
+    #         #获得事件语句并将/n换位空格
+    #         text_str = xml_parse_base.get_nodevalue(None, mention_ldc_scope_charseq[0], 0).replace("\n", " ")
+    #         R_element.text = text_str
+    #         s = None
+    #         m = 0
+    #         #text开始均为0
+    #         for charse in mention_ldc_scope_charseq:
+    #             start = xml_parse_base.get_attrvalue(None,charse, 'START')#charseq的START属性值
+    #             end = xml_parse_base.get_attrvalue(None, charse, 'END')
+    #             s = start
+    #             R_element.text_start = 0
+    #             R_element.text_end = int(end)-int(start)
+    #             for j, x in enumerate(entity):
+    #                 #print entity[x][0]
+    #                 if int(entity[x][0])>=int(start) and int(entity[x][1])<=int(end):
+    #                     R_element.entity_start.append(int(entity[x][0]) - int(s))
+    #                     #print R_element.entity_start
+    #                     R_element.entity_end.append(int(entity[x][1]) - int(s))
+    #                     R_element.entity_type.append(entity[x][2])
+    #                     R_element.entity.append(R_element.text[R_element.entity_start[m]:R_element.entity_end[m]+1])
+    #                     m+=1
+    #
+    #
+    #         # 获取事件触发词
+    #         mention_anchor = xml_parse_base.get_xmlnode(None, mention_node, 'anchor')#获得anchor列表
+    #         mention_anchor_charseq = xml_parse_base.get_xmlnode(None, mention_anchor[0], 'charseq')
+    #         for anch in mention_anchor_charseq:
+    #             start = xml_parse_base.get_attrvalue(None, anch, 'START')
+    #             end = xml_parse_base.get_attrvalue(None, anch, 'END')
+    #             R_element.trigger_start = int(start)-int(s)#相对语句位置
+    #             R_element.trigger_end = int(end)-int(s)
+    #             R_element.trigger = R_element.text[R_element.trigger_start:R_element.trigger_end+1]#begin 这样的
+    #
+    #
+    #
+    #         # 获取事件元素
+    #         mention_arguments = xml_parse_base.get_xmlnode(None, mention_node, 'event_mention_argument')#event_mention_argument列表
+    #         i = 0
+    #         arg = []
+    #         for mention_argument in mention_arguments:
+    #             mention_argument_refid = xml_parse_base.get_attrvalue(None,mention_argument, 'REFID')
+    #             #mention_argument_extent = get_xmlnode(None, mention_argument, 'extent')
+    #             #mention_argument_charseq = get_xmlnode(None, mention_argument_extent[0], 'charseq')
+    #             try:
+    #                 argument_position = entity[mention_argument_refid]
+    #                 start = argument_position[0]
+    #                 end = argument_position[1]
+    #                 entity_type = argument_position[2]
+    #             except KeyError:
+    #                 print ('error')
+    #                 mention_argument_extent = xml_parse_base.get_xmlnode(None, mention_argument, 'extent')
+    #                 mention_argument_charseq = xml_parse_base.get_xmlnode(None, mention_argument_extent[0], 'charseq')
+    #                 for argument_charse in mention_argument_charseq:
+    #                     start = xml_parse_base.get_attrvalue(None,argument_charse, 'START')
+    #                     end = xml_parse_base.get_attrvalue(None, argument_charse, 'END')
+    #                     entity_type = None
+    #
+    #             R_element.argument_start.append(int(start) - int(s))#多个事件元素
+    #             R_element.argument_end.append( int(end) - int(s))
+    #             R_element.argument.append(R_element.text[R_element.argument_start[i]:R_element.argument_end[i]+1])
+    #             #arg.append(get_nodevalue(None, mention_argument_charseq[0], 0).replace("\n", " "))#事件元素列表
+    #             R_element.argument_entity_type.append(entity_type)
+    #             R_element.argument_type.append(xml_parse_base.get_attrvalue(None, mention_argument, 'ROLE'))#事件元素类型
+    #             i+=1
+    #
+    #         R.append(R_element)
+    # return R
 
 
 def encode_corpus(flag):
@@ -281,7 +344,7 @@ def argu_split_sentence(sentence_list,tag_list,argument_type,num_start,num_end):
 
 
 """
-将事件写入到txt文件
+处理ACE事件
 """
 def deal_ace_event(flag):
 
@@ -289,6 +352,8 @@ def deal_ace_event(flag):
     print(len(event_list))
     # event_file = open(argument_save_txt+flag, 'w')
 
+    word_result_list=[]
+    tag_result_list=[]
     for ace_event in event_list:
 
         record_flag=True
@@ -305,14 +370,20 @@ def deal_ace_event(flag):
 
         if ''.join(sen_split_list)!=ace_event.text:
             record_flag=False
+            print(sen_split_list)
         else:
             for event_argument in ace_event.argument:
                 if event_argument not in sen_split_list:
                     record_flag=False
 
         if record_flag:
-            print(sen_split_list)
-            print(tag_split_list)
+            word_result, tag_result = get_word_tag_list(sen_split_list, tag_split_list)
+            word_result_list.append(word_result)
+            tag_result_list.append(tag_result)
+
+    print(len(word_result_list))
+    print(len(tag_result_list))
+    return word_result_list,tag_result_list
 
 
 
@@ -343,6 +414,27 @@ def deal_ace_event(flag):
         # for i in sen_split_list:
         #     print(i)
         # print(index,sen_split_list)
+
+def clean_str(string, TREC=False):
+    string = re.sub(r"[^A-Za-z0-9(),.!?\'\`<>]-", " ", string)
+    string = re.sub(r"\'m", r" 'm", string)
+    string = re.sub(r"\'s", " \'s", string)
+    string = re.sub(r"\'ve", " \'ve", string)
+    string = re.sub(r"n\'t", " n\'t", string)
+    string = re.sub(r"\'re", " \'re", string)
+    string = re.sub(r"\'d", " \'d", string)
+    string = re.sub(r"\'ll", " \'ll", string)
+    # string = re.sub(r"\.", " . ", string)
+    string = re.sub(r"\,", r" , ", string)
+    string = re.sub(r"!", " ! ", string)
+    string = re.sub(r"\(", " ( ", string)
+    string = re.sub(r"\)", " ) ", string)
+    string = re.sub(r"\?", " ? ", string)
+    string = re.sub(r"\s{2,}", " ", string)
+
+    # string=number_form(string)
+    return string.strip() if TREC else string.strip().lower()
+
 
 def get_word_tag_list(sen_list,tag_list):
     word_result_list=[]
@@ -385,38 +477,23 @@ def get_word_tag_list(sen_list,tag_list):
 #     return s
 
 
-def clean_str(string, TREC=False):
-    string = re.sub(r"[^A-Za-z0-9(),.!?\'\`<>]-", " ", string)
-    string = re.sub(r"\'m", r" 'm", string)
-    string = re.sub(r"\'s", " \'s", string)
-    string = re.sub(r"\'ve", " \'ve", string)
-    string = re.sub(r"n\'t", " n\'t", string)
-    string = re.sub(r"\'re", " \'re", string)
-    string = re.sub(r"\'d", " \'d", string)
-    string = re.sub(r"\'ll", " \'ll", string)
-    # string = re.sub(r"\.", " . ", string)
-    string = re.sub(r"\,", r" , ", string)
-    string = re.sub(r"!", " ! ", string)
-    string = re.sub(r"\(", " ( ", string)
-    string = re.sub(r"\)", " ) ", string)
-    string = re.sub(r"\?", " ? ", string)
-    string = re.sub(r"\s{2,}", " ", string)
+def list_to_vec(word_result_list, tag_result_list):
+    for word_list,tag_list in zip(word_result_list, tag_result_list):
+        print(word_list,tag_list)
 
-    # string=number_form(string)
-    return string.strip() if TREC else string.strip().lower()
 
 
 if __name__ == "__main__":
     # sen_list=['Former senior banker ', 'Callum McCarthy', ' ', 'begins', ' what is ',"one of the most important jobs in London's financial world", ' in ', 'September', ', when incumbent Howard Davies steps down']
     # tag_list=[None, 'Argument_Person', None, 'Trigger_Start-Position', None, 'Argument_Position', None, 'Argument_Time-Within',None]
 
-    sen_list =['', 'Iraqis', ' mostly ', 'fought', ' back with small ', 'arms', ', ', 'pistols', ', machine ', 'guns',' and rocket-propelled ', 'grenades', '']
-    tag_list =[None, 'Argument_Attacker', None, 'Trigger_Attack', None, 'Argument_Instrument', None, 'Argument_Instrument', None, 'Argument_Instrument', None, 'Argument_Instrument', None]
+    # sen_list =['', 'Iraqis', ' mostly ', 'fought', ' back with small ', 'arms', ', ', 'pistols', ', machine ', 'guns',' and rocket-propelled ', 'grenades', '']
+    # tag_list =[None, 'Argument_Attacker', None, 'Trigger_Attack', None, 'Argument_Instrument', None, 'Argument_Instrument', None, 'Argument_Instrument', None, 'Argument_Instrument', None]
     #
     # sen_list=['The ', 'EU', ' is set to ', 'release', ' ', '20 million euros (US$21.5 million',') in immediate humanitarian aid for ', 'Iraq'," if war breaks out and may dip into an ``emergency reserve'' of 250 million euros (US$269 million) for humanitarian relief"]
     # tag_list=[None, 'Argument_Giver', None, 'Trigger_Transfer-Money', None, 'Argument_Money', None, 'Argument_Beneficiary', None]
 
-    word_result_list, tag_result_list=get_word_tag_list(sen_list,tag_list)
+    # word_result_list, tag_result_list=get_word_tag_list(sen_list,tag_list)
 
     # print(sen_list)
     # print(tag_list)
@@ -430,8 +507,8 @@ if __name__ == "__main__":
     #         word_result_list.append(word)
     #         tag_result_list.append(tag)
     #     # print(index,phrase,tag)
-    print(word_result_list)
-    print(tag_result_list)
+    # print(word_result_list)
+    # print(tag_result_list)
 
 
     # pass
@@ -440,7 +517,29 @@ if __name__ == "__main__":
 
     # deal_ace_event("dev")
     # deal_ace_event("train")
-    # deal_ace_event("test")
+    # word_result_list, tag_result_list=deal_ace_event("test")
+    # list_to_vec(word_result_list, tag_result_list)
+    # print(word_result_list)
+    # print(tag_result_list)
+
+    ace_info_list = extract_ace_info(acepath + "AFP_ENG_20030401.0476.apf.xml")
+    for ace_event in ace_info_list:
+
+        record_flag=True
+
+        sen_split_list=[]
+        tag_split_list=[]
+        sen_split_list.append(ace_event.text)
+        tag_split_list.append(None)
+        for i,event_argument in enumerate(ace_event.argument):
+            sen_split_list,tag_split_list=argu_split_sentence(sen_split_list,tag_split_list,"Argument_"+ace_event.argument_type[i],ace_event.argument_start[i],ace_event.argument_end[i]+1)
+
+        sen_split_list, tag_split_list = argu_split_sentence(sen_split_list, tag_split_list, "Trigger_"+ace_event.trigger_sub_type,
+                                                             ace_event.trigger_start, ace_event.trigger_end + 1)
+
+        if ''.join(sen_split_list)!=ace_event.text:
+            record_flag=False
+            print(sen_split_list)
 
     # ace_info_list = extract_ace_info(acepath + "AFP_ENG_20030401.0476.apf.xml")
     # for ace_event in ace_info_list:
@@ -449,10 +548,13 @@ if __name__ == "__main__":
     #     sen_split_list.append(ace_event.text)
     #     tag_split_list.append(None)
     #     for i,event_argument in enumerate(ace_event.argument):
-    #         sen_split_list,tag_split_list=argu_split_sentence(sen_split_list,tag_split_list,ace_event.argument_type[i],ace_event.argument_start[i],ace_event.argument_end[i]+1)
+    #         sen_split_list,tag_split_list=argu_split_sentence(sen_split_list,tag_split_list,"Argument_"+ace_event.argument_type[i],ace_event.argument_start[i],ace_event.argument_end[i]+1)
     #
+    #     print(ace_event.toString())
     #     print(sen_split_list)
     #     print(tag_split_list)
+    #     print("============================================================")
+    #     sys.exit()
     #     print("=========================================================")
     #     print(''.join(sen_split_list))
     #     if ''.join(sen_split_list)!=ace_event.text:

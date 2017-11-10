@@ -362,6 +362,7 @@ def deal_ace_event(flag):
         tag_split_list=[]
         sen_split_list.append(ace_event.text)
         tag_split_list.append(None)
+
         for i,event_argument in enumerate(ace_event.argument):
             sen_split_list,tag_split_list=argu_split_sentence(sen_split_list,tag_split_list,"Argument_"+ace_event.argument_type[i],ace_event.argument_start[i],ace_event.argument_end[i]+1)
 
@@ -522,24 +523,31 @@ if __name__ == "__main__":
     # print(word_result_list)
     # print(tag_result_list)
 
-    ace_info_list = extract_ace_info(acepath + "AFP_ENG_20030401.0476.apf.xml")
+    ace_info_list = extract_ace_info("D:\Code\pycharm\Sequence-Label-Attention\data\AFP_ENG_20030401.0476.apf.xml")
     for ace_event in ace_info_list:
+        if "best-known" in ace_event.text:
+            print("=============================================")
+            print(ace_event.toString())
+            record_flag=True
 
-        record_flag=True
+            sen_split_list=[]
+            tag_split_list=[]
+            sen_split_list.append(ace_event.text)
+            tag_split_list.append(None)
+            for i,event_argument in enumerate(ace_event.argument):
+                sen_split_list,tag_split_list=argu_split_sentence(sen_split_list,tag_split_list,"Argument_"+ace_event.argument_type[i],ace_event.argument_start[i],ace_event.argument_end[i]+1)
 
-        sen_split_list=[]
-        tag_split_list=[]
-        sen_split_list.append(ace_event.text)
-        tag_split_list.append(None)
-        for i,event_argument in enumerate(ace_event.argument):
-            sen_split_list,tag_split_list=argu_split_sentence(sen_split_list,tag_split_list,"Argument_"+ace_event.argument_type[i],ace_event.argument_start[i],ace_event.argument_end[i]+1)
+            sen_split_list, tag_split_list = argu_split_sentence(sen_split_list, tag_split_list, "Trigger_"+ace_event.trigger_sub_type,
+                                                                 ace_event.trigger_start, ace_event.trigger_end + 1)
 
-        sen_split_list, tag_split_list = argu_split_sentence(sen_split_list, tag_split_list, "Trigger_"+ace_event.trigger_sub_type,
-                                                             ace_event.trigger_start, ace_event.trigger_end + 1)
+            if ''.join(sen_split_list)!=ace_event.text:
+                record_flag=False
+                print(sen_split_list)
+                print(''.join(sen_split_list))
+                print(ace_event.text)
+            else:
+                print(ace_event.text)
 
-        if ''.join(sen_split_list)!=ace_event.text:
-            record_flag=False
-            print(sen_split_list)
 
     # ace_info_list = extract_ace_info(acepath + "AFP_ENG_20030401.0476.apf.xml")
     # for ace_event in ace_info_list:

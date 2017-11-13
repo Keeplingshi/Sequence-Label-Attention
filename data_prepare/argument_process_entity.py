@@ -25,7 +25,7 @@ doclist_dev = sourcepath + "split1.0/ACE_dev_filelist"
 doclist_full = sourcepath + "split1.0/ACE_full_filelist"
 
 data_save_path = "D:/Code/pycharm/Sequence-Label-Attention/data_prepare/data/argument_raw/argument_data.data"
-form_data_save_path = "D:/Code/pycharm/Sequence-Label-Attention/data_prepare/data/argument_raw/argument_data_form.data"
+form_data_save_path = "D:/Code/pycharm/Sequence-Label-Attention/data_prepare/data/argument_raw/argument_data_form2.data"
 
 argument_save_txt="D:/Code/pycharm/Sequence-Label-Attention/data_prepare/data/argument_raw/argument_"
 
@@ -369,6 +369,7 @@ def list_to_vec(word_result_list, tag_result_list,wordvec_dict, posi_dict):
     X=[]
     Y=[]
     W=[]
+    T=[]
     for word_list,tag_list in zip(word_result_list, tag_result_list):
 
         #一个句子的特征向量
@@ -400,6 +401,7 @@ def list_to_vec(word_result_list, tag_result_list,wordvec_dict, posi_dict):
                 # except:
                 #     print(abs(index-trigger_tag_posi))
                 #     sys.exit()
+                print(trigger_tag_vec.index(1.0))
                 word_vec.extend(trigger_tag_vec)
                 vec_list.append(word_vec)
                 #单词
@@ -415,8 +417,9 @@ def list_to_vec(word_result_list, tag_result_list,wordvec_dict, posi_dict):
         X.append(vec_list)
         Y.append(label_list)
         W.append(w_list)
+        T.append(trigger_tag_vec.index(1.0))
 
-    return X,Y,W
+    return X,Y,W,T
 
 
 #生成位置向量，5维
@@ -464,30 +467,33 @@ def padding_mask(x, y, w):
     return X_train, Y_train, L_train, Weights_train, W_train
 
 
-def form_data(X_train, Y_train, W_train,X_test, Y_test, W_test,X_dev, Y_dev, W_dev):
+def form_data(X_train, Y_train, W_train,T_train, X_test, Y_test, W_test,T_test, X_dev, Y_dev, W_dev,T_dev):
 
     X_train, tag_train, L_train, Weights_train, W_train = padding_mask(X_train, Y_train, W_train)
     X_test, tag_test, L_test, Weights_test, W_test = padding_mask(X_test, Y_test, W_test)
     X_dev, tag_dev, L_dev, Weights_dev, W_dev = padding_mask(X_dev, Y_dev, W_dev)
 
-    data = X_train, tag_train, L_train, Weights_train, W_train, X_test, tag_test, L_test, Weights_test, W_test, X_dev, tag_dev, L_dev, Weights_dev, W_dev
+    data = X_train, tag_train,T_train, L_train, Weights_train, W_train, X_test, tag_test,T_test, L_test, Weights_test, W_test, X_dev, tag_dev,T_dev, L_dev, Weights_dev, W_dev
     f = open(form_data_save_path, 'wb')
     pickle.dump(data, f)
 
     print(np.array(X_train).shape)
     print(np.array(tag_train).shape)
+    print(np.array(T_train).shape)
     print(np.array(L_train).shape)
     print(np.array(Weights_train).shape)
     print(np.array(W_train).shape)
 
     print(np.array(X_test).shape)
     print(np.array(tag_test).shape)
+    print(np.array(T_test).shape)
     print(np.array(L_test).shape)
     print(np.array(Weights_test).shape)
     print(np.array(W_test).shape)
 
     print(np.array(X_dev).shape)
     print(np.array(tag_dev).shape)
+    print(np.array(T_dev).shape)
     print(np.array(L_dev).shape)
     print(np.array(Weights_dev).shape)
     print(np.array(W_dev).shape)
@@ -495,20 +501,44 @@ def form_data(X_train, Y_train, W_train,X_test, Y_test, W_test,X_dev, Y_dev, W_d
 
 if __name__ == "__main__":
 
-    posi_dict=generate_posi_vec()
-    wordvec_dict=get_word2vec()
+    # #==========================生成训练数据==================================
+    # posi_dict=generate_posi_vec()
+    # wordvec_dict=get_word2vec()
+    #
+    # train_word_result, train_tag_result=deal_ace_event("train")
+    # X_train,Y_train,W_train,T_train=list_to_vec(train_word_result, train_tag_result,wordvec_dict,posi_dict)
+    # test_word_result, test_tag_result=deal_ace_event("test")
+    # X_test,Y_test,W_test,T_test=list_to_vec(test_word_result, test_tag_result,wordvec_dict,posi_dict)
+    # dev_word_result, dev_tag_result=deal_ace_event("dev")
+    # X_dev,Y_dev,W_dev,T_dev=list_to_vec(dev_word_result, dev_tag_result,wordvec_dict,posi_dict)
+    #
+    # form_data(X_train, Y_train, W_train,T_train, X_test, Y_test, W_test,T_test, X_dev, Y_dev, W_dev,T_dev)
+    # #==========================生成训练数据==================================
 
-    # deal_ace_event("full")
 
-    train_word_result, train_tag_result=deal_ace_event("train")
-    X_train,Y_train,W_train=list_to_vec(train_word_result, train_tag_result,wordvec_dict,posi_dict)
-    test_word_result, test_tag_result=deal_ace_event("test")
-    X_test,Y_test,W_test=list_to_vec(test_word_result, test_tag_result,wordvec_dict,posi_dict)
-    dev_word_result, dev_tag_result=deal_ace_event("dev")
-    X_dev,Y_dev,W_dev=list_to_vec(dev_word_result, dev_tag_result,wordvec_dict,posi_dict)
+    event_list=encode_corpus("dev")
+    print(len(event_list))
+    for ace_event in event_list:
+        if ace_event.trigger_sub_type=='Nominate' and 'Agent' in ace_event.argument_type:
+            print(ace_event.toString())
+        if ace_event.trigger_sub_type=='Appeal' and 'Plaintiff' in ace_event.argument_type:
+            print(ace_event.toString())
+        if ace_event.trigger_sub_type=='Transport' and 'Victim' in ace_event.argument_type:
+            print(ace_event.toString())
+        if ace_event.trigger_sub_type=='Transport' and 'Place' in ace_event.argument_type:
+            print(ace_event.toString())
+        if ace_event.trigger_sub_type=='Die' and 'Person' in ace_event.argument_type:
+            print(ace_event.toString())
+        if ace_event.trigger_sub_type=='Attack' and 'Agent' in ace_event.argument_type:
+            print(ace_event.toString())
+        if ace_event.trigger_sub_type=='Attack' and 'Victim' in ace_event.argument_type:
+            print(ace_event.toString())
+        if ace_event.trigger_sub_type=='Phone-write' and 'Place' in ace_event.argument_type:
+            print(ace_event.toString())
 
-    form_data(X_train, Y_train, W_train, X_test, Y_test, W_test, X_dev, Y_dev, W_dev)
 
+    # test_word_result, test_tag_result=deal_ace_event("test")
+    # print(test_word_result)
 
     # sen_list=['Former senior banker ', 'Callum McCarthy', ' ', 'begins', ' what is ',"one of the most important jobs in London's financial world", ' in ', 'September', ', when incumbent Howard Davies steps down']
     # tag_list=[None, 'Argument_Person', None, 'Trigger_Start-Position', None, 'Argument_Position', None, 'Argument_Time-Within',None]

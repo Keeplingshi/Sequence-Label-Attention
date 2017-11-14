@@ -501,40 +501,40 @@ def form_data(X_train, Y_train, W_train,T_train, X_test, Y_test, W_test,T_test, 
 
 if __name__ == "__main__":
 
-    # #==========================生成训练数据==================================
-    # posi_dict=generate_posi_vec()
-    # wordvec_dict=get_word2vec()
-    #
-    # train_word_result, train_tag_result=deal_ace_event("train")
-    # X_train,Y_train,W_train,T_train=list_to_vec(train_word_result, train_tag_result,wordvec_dict,posi_dict)
-    # test_word_result, test_tag_result=deal_ace_event("test")
-    # X_test,Y_test,W_test,T_test=list_to_vec(test_word_result, test_tag_result,wordvec_dict,posi_dict)
-    # dev_word_result, dev_tag_result=deal_ace_event("dev")
-    # X_dev,Y_dev,W_dev,T_dev=list_to_vec(dev_word_result, dev_tag_result,wordvec_dict,posi_dict)
-    #
-    # form_data(X_train, Y_train, W_train,T_train, X_test, Y_test, W_test,T_test, X_dev, Y_dev, W_dev,T_dev)
-    # #==========================生成训练数据==================================
+    #==========================生成训练数据==================================
+    posi_dict=generate_posi_vec()
+    wordvec_dict=get_word2vec()
+
+    train_word_result, train_tag_result=deal_ace_event("train")
+    X_train,Y_train,W_train,T_train=list_to_vec(train_word_result, train_tag_result,wordvec_dict,posi_dict)
+    test_word_result, test_tag_result=deal_ace_event("test")
+    X_test,Y_test,W_test,T_test=list_to_vec(test_word_result, test_tag_result,wordvec_dict,posi_dict)
+    dev_word_result, dev_tag_result=deal_ace_event("dev")
+    X_dev,Y_dev,W_dev,T_dev=list_to_vec(dev_word_result, dev_tag_result,wordvec_dict,posi_dict)
+
+    form_data(X_train, Y_train, W_train,T_train, X_test, Y_test, W_test,T_test, X_dev, Y_dev, W_dev,T_dev)
+    #==========================生成训练数据==================================
 
 
-    event_list=encode_corpus("dev")
-    print(len(event_list))
-    for ace_event in event_list:
-        if ace_event.trigger_sub_type=='Nominate' and 'Agent' in ace_event.argument_type:
-            print(ace_event.toString())
-        if ace_event.trigger_sub_type=='Appeal' and 'Plaintiff' in ace_event.argument_type:
-            print(ace_event.toString())
-        if ace_event.trigger_sub_type=='Transport' and 'Victim' in ace_event.argument_type:
-            print(ace_event.toString())
-        if ace_event.trigger_sub_type=='Transport' and 'Place' in ace_event.argument_type:
-            print(ace_event.toString())
-        if ace_event.trigger_sub_type=='Die' and 'Person' in ace_event.argument_type:
-            print(ace_event.toString())
-        if ace_event.trigger_sub_type=='Attack' and 'Agent' in ace_event.argument_type:
-            print(ace_event.toString())
-        if ace_event.trigger_sub_type=='Attack' and 'Victim' in ace_event.argument_type:
-            print(ace_event.toString())
-        if ace_event.trigger_sub_type=='Phone-write' and 'Place' in ace_event.argument_type:
-            print(ace_event.toString())
+    # event_list=encode_corpus("dev")
+    # print(len(event_list))
+    # for ace_event in event_list:
+    #     if ace_event.trigger_sub_type=='Nominate' and 'Agent' in ace_event.argument_type:
+    #         print(ace_event.toString())
+    #     if ace_event.trigger_sub_type=='Appeal' and 'Plaintiff' in ace_event.argument_type:
+    #         print(ace_event.toString())
+    #     if ace_event.trigger_sub_type=='Transport' and 'Victim' in ace_event.argument_type:
+    #         print(ace_event.toString())
+    #     if ace_event.trigger_sub_type=='Transport' and 'Place' in ace_event.argument_type:
+    #         print(ace_event.toString())
+    #     if ace_event.trigger_sub_type=='Die' and 'Person' in ace_event.argument_type:
+    #         print(ace_event.toString())
+    #     if ace_event.trigger_sub_type=='Attack' and 'Agent' in ace_event.argument_type:
+    #         print(ace_event.toString())
+    #     if ace_event.trigger_sub_type=='Attack' and 'Victim' in ace_event.argument_type:
+    #         print(ace_event.toString())
+    #     if ace_event.trigger_sub_type=='Phone-write' and 'Place' in ace_event.argument_type:
+    #         print(ace_event.toString())
 
 
     # test_word_result, test_tag_result=deal_ace_event("test")

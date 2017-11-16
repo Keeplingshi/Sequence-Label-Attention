@@ -101,6 +101,7 @@ def test():
 
 
 def get_event_template():
+    #f = open("D:/Code/pycharm/Sequence-Label-Attention/data/ace_event_template_time")             # 返回一个文件对象
     f = open("D:/Code/pycharm/Sequence-Label-Attention/data/ACE-event-argument.txt")             # 返回一个文件对象
     line = f.readline()             # 调用文件的 readline()方法
     event_template_b=dict()
@@ -127,7 +128,12 @@ def save_event_template():
         if "time" in i:
             time_list.append(i)
 
+    event_time_list=[]
+    for j in time_list:
+        event_time_list.append(ACE_EVENT_Argument_Type.index(j))
+
     event_template_b=get_event_template()
+    print(event_template_b)
 
     event_template_num_dict=dict()
     for k,v in event_template_b.items():
@@ -137,9 +143,9 @@ def save_event_template():
         argument_num_list=[ACE_EVENT_Argument_Type.index(i) for i in v]
         event_template_num_dict[ACE_EVENT_Trigger_Type.index(k)]=argument_num_list
 
-
+    data=event_template_num_dict,event_time_list
     f = open("D:/Code/pycharm/Sequence-Label-Attention/data_prepare/data/event_template.data", 'wb')
-    pickle.dump(event_template_num_dict, f)
+    pickle.dump(data, f)
 
 
 def argument_calculate_f_score():
@@ -149,8 +155,10 @@ def argument_calculate_f_score():
     data_f.close()
 
     template_f = open("D:/Code/pycharm/Sequence-Label-Attention/data_prepare/data/event_template.data", 'rb')
-    event_template_num_dict = pickle.load(template_f)
+    event_template_num_dict,event_time_list = pickle.load(template_f)
     template_f.close()
+
+    print(event_time_list)
 
     # print(pred_test)
     # print(tag_test)
@@ -163,10 +171,10 @@ def argument_calculate_f_score():
     prediction=[]
 
     for i,(event_type,pred_test) in enumerate(zip(T_test,pred_test)):
-        print(i,event_type,pred_test)
+        # print(i,event_type,pred_test)
         event_template=event_template_num_dict[event_type]
         event_template.append(0)
-        print(np.array(pred_test).shape)
+        # print(np.array(pred_test).shape)
         sen_pred=[]
         for pred_type in pred_test:
             max_index=get_max_from_list(pred_type,event_template)
@@ -195,7 +203,7 @@ def argument_calculate_f_score():
                 classify_r+=1
                 iden_r+=1
 
-            if tag_test[i][j]==prediction[i][j] and tag_test[i][j]!=0:
+            if (tag_test[i][j] in event_time_list and prediction[i][j] in event_time_list) or (tag_test[i][j]==prediction[i][j] and tag_test[i][j]!=0):
                 classify_acc+=1
 
             if prediction[i][j]!=0 and tag_test[i][j]!=0:
@@ -248,6 +256,7 @@ if __name__ == "__main__":
     # save_event_template()
 
     argument_calculate_f_score()
+
 
     # ACE_EVENT_Trigger_Type=['Trigger_None', 'Trigger_Transport', 'Trigger_Elect', 'Trigger_Start-Position', 'Trigger_Nominate', 'Trigger_Attack', 'Trigger_End-Position', 'Trigger_Meet', 'Trigger_Marry', 'Trigger_Phone-Write', 'Trigger_Transfer-Money', 'Trigger_Sue', 'Trigger_Demonstrate', 'Trigger_End-Org', 'Trigger_Injure', 'Trigger_Die', 'Trigger_Arrest-Jail', 'Trigger_Transfer-Ownership', 'Trigger_Start-Org', 'Trigger_Execute', 'Trigger_Trial-Hearing', 'Trigger_Sentence', 'Trigger_Be-Born', 'Trigger_Charge-Indict', 'Trigger_Convict', 'Trigger_Declare-Bankruptcy', 'Trigger_Release-Parole', 'Trigger_Fine', 'Trigger_Pardon', 'Trigger_Appeal', 'Trigger_Merge-Org', 'Trigger_Extradite', 'Trigger_Divorce', 'Trigger_Acquit']
     # ACE_EVENT_Argument_Type=['Argument_None', 'Argument_Vehicle', 'Argument_Artifact', 'Argument_Destination', 'Argument_Agent', 'Argument_Person', 'Argument_Position', 'Argument_Entity', 'Argument_Attacker', 'Argument_Place', 'Argument_Time-At-Beginning', 'Argument_Target', 'Argument_Giver', 'Argument_Recipient', 'Argument_Plaintiff', 'Argument_Money', 'Argument_Victim', 'Argument_Time-Within', 'Argument_Buyer', 'Argument_Time-Ending', 'Argument_Instrument', 'Argument_Seller', 'Argument_Origin', 'Argument_Time-Holds', 'Argument_Org', 'Argument_Time-At-End', 'Argument_Time-Before', 'Argument_Time-Starting', 'Argument_Time-After', 'Argument_Beneficiary', 'Argument_Defendant', 'Argument_Adjudicator', 'Argument_Sentence', 'Argument_Crime', 'Argument_Prosecutor', 'Argument_Price']

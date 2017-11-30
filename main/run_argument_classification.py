@@ -35,9 +35,9 @@ tf.app.flags.DEFINE_string("data_dir", "D:/Code/pycharm/Sequence-Label-Attention
 tf.app.flags.DEFINE_string("saver_dir", "D:/Code/pycharm/Sequence-Label-Attention/main/saver/argument_saver/", "saver directory.")
 tf.app.flags.DEFINE_boolean("use_attention", True, "Use attention based RNN")
 tf.app.flags.DEFINE_integer("max_sequence_length", 60, "Max sequence length.")
-tf.app.flags.DEFINE_float("dropout_keep_prob", 0.7, "dropout keep cell input and output prob.")
+tf.app.flags.DEFINE_float("dropout_keep_prob", 0.5, "dropout keep cell input and output prob.")
 tf.app.flags.DEFINE_boolean("bidirectional_rnn", True, "Use birectional RNN")
-tf.app.flags.DEFINE_integer("epoch", 50, "数据集共训练100次.")
+tf.app.flags.DEFINE_integer("epoch", 100, "数据集共训练100次.")
 FLAGS = tf.app.flags.FLAGS
 
 
@@ -251,7 +251,7 @@ def train():
             current_step_f_score=argument_calculate_f_score(test_pred, tag_test, L_test,T_test, "test:"+str(e))
             if max_f_score<current_step_f_score:
                 max_f_score=current_step_f_score
-                if max_f_score > 0.5:
+                if max_f_score > 0.55:
 
                     log_file_path = os.path.join(FLAGS.saver_dir+"model_"+str(max_f_score)+".log")
                     log_file=open(log_file_path, "w")

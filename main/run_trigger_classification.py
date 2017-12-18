@@ -27,11 +27,11 @@ import stat
 tf.app.flags.DEFINE_float("learning_rate", 0.001, "Learning rate.")
 tf.app.flags.DEFINE_float("max_gradient_norm", 1.0, "Clip gradients to this norm.")
 tf.app.flags.DEFINE_integer("batch_size", 100, "Batch size to use during training.")
-tf.app.flags.DEFINE_integer("hidden_layers", 128, "Size of each model layer.")
+tf.app.flags.DEFINE_integer("hidden_layers", 100, "Size of each model layer.")
 tf.app.flags.DEFINE_integer("target_size", 34, "class number.")
 tf.app.flags.DEFINE_integer("word_embedding_size", 300, "word embedding size")
 tf.app.flags.DEFINE_integer("num_layers", 1, "Number of layers in the model.")
-tf.app.flags.DEFINE_string("data_dir", "D:/Code/pycharm/Sequence-Label-Attention/data_prepare/data/trigger_data_form.data", "Data directory")
+tf.app.flags.DEFINE_string("data_dir", "D:/Code/pycharm/Sequence-Label-Attention/main/data/trigger_data_form.data", "Data directory")
 tf.app.flags.DEFINE_string("saver_dir", "D:/Code/pycharm/Sequence-Label-Attention/main/saver/", "saver directory.")
 tf.app.flags.DEFINE_boolean("use_attention", True, "Use attention based RNN")
 tf.app.flags.DEFINE_integer("max_sequence_length", 60, "Max sequence length.")
@@ -200,7 +200,7 @@ def train():
             current_step_f_score=calculate_f_score(test_pred, tag_test, L_test, "test:"+str(e))
             if max_f_score<current_step_f_score:
                 max_f_score=current_step_f_score
-                if max_f_score > 0.6:
+                if max_f_score > 0.69:
                     log_file_path = os.path.join(FLAGS.saver_dir+"model_"+str(max_f_score)+".log")
                     log_file=open(log_file_path, "w")
                     for k, v in FLAGS.__dict__['__flags'].items():

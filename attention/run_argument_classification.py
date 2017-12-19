@@ -229,16 +229,16 @@ def train():
         current_step_f_score=argument_calculate_f_score(test_pred, tag_test, L_test,T_test, "test:")
         print(current_step_f_score)
 
-        print(np.array(test_pred).shape)        #预测结果
-        print(np.array(tag_test).shape)         #真是结果
-        print(np.array(attention_weights).shape)    #注意力权重
-        print(np.array(L_test).shape)           #句长
-        print(np.array(W_test).shape)    #单词
-
-        count_save_data_path="D:/Code/pycharm/Sequence-Label-Attention/attention/count_data/argument_count.data"
-        count_data=test_pred,tag_test,attention_weights,L_test,W_test
-        f = open(count_save_data_path, 'wb')
-        pickle.dump(count_data, f)
+        # print(np.array(test_pred).shape)        #预测结果
+        # print(np.array(tag_test).shape)         #真是结果
+        # print(np.array(attention_weights).shape)    #注意力权重
+        # print(np.array(L_test).shape)           #句长
+        # print(np.array(W_test).shape)    #单词
+        #
+        # count_save_data_path="D:/Code/pycharm/Sequence-Label-Attention/attention/count_data/argument_count.data"
+        # count_data=test_pred,tag_test,attention_weights,L_test,W_test
+        # f = open(count_save_data_path, 'wb')
+        # pickle.dump(count_data, f)
 
         # max_f_score=0
         #
